@@ -1,0 +1,33 @@
+name: SphinxDocumentation
+
+on: [push, pull_request]
+
+permissions:
+  contents: write
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+      - uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+      - name: install ubuntu dependencies
+        run: |
+          sudo apt install pandoc liblapack3 libglut3.12 libglu1-mesa libfreetype6 fonts-ubuntu
+          cd /usr/lib/x86_64-linux-gnu/ && sudo ln -s libglut.so.3.12 libglut.so.3
+      - name: install python dependencies
+        run: |
+          pip install sphinx sphinx_rtd_theme myst_parser nbsphinx robotic numpy
+      - name: Sphinx build
+        run: |
+          cd rai-tutorials && git fetch --all && git reset --hard origin/main
+          cd ../rai-docs && git fetch --all && git reset --hard origin/main
+          sphinx-build doc ../html
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: html

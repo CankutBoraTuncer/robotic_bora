@@ -1,0 +1,15 @@
+[submodule "rai"]
+	path = rai
+	url = ../rai.git
+[submodule "rai-robotModels"]
+	path = rai-robotModels
+	url = ../rai-robotModels.git
+[submodule "botop"]
+	path = botop
+	url = ../botop.git
+[submodule "rai-docs"]
+	path = rai-docs
+	url = ../rai-docs.git
+[submodule "rai-tutorials"]
+	path = rai-tutorials
+	url = ../rai-tutorials.git
