@@ -25,11 +25,13 @@ void init_PathAlgos(pybind11::module& m) {
 
   // 2. New MCR_PathFinder Class Binding
   pybind11::class_<rai::MCR_PathFinder, std::shared_ptr<rai::MCR_PathFinder>>(m, "MCR_PathFinder", "MCR Path Planner")
-    .def(pybind11::init<rai::Configuration&, const rai::String, const rai::String, const StringA&, double, int>(),
+    .def(pybind11::init<rai::Configuration&, const rai::String, const rai::String, const StringA&, bool, bool,double, int>(),
             pybind11::arg("C"),
             pybind11::arg("agent"),
             pybind11::arg("goalFrame"),
             pybind11::arg("obsList"),
+            pybind11::arg("persist")=false,
+            pybind11::arg("earlyExit")=false,
             pybind11::arg("penalty")=500.0,
             pybind11::arg("verbose")=0)
     .def("solve", &rai::MCR_PathFinder::solve, "Solve the MCR problem", 

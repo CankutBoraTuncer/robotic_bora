@@ -16,8 +16,8 @@ namespace rai {
 // ==============================================================================
 
 
-MCR_PathFinder::MCR_PathFinder(rai::Configuration& _C, const rai::String _agent, const rai::String _goalFrame, const StringA& _obsList, double _penalty, int _verbose)
-  : agent(_agent), verbose(_verbose), obsList(_obsList), penalty(_penalty), C(_C) {
+MCR_PathFinder::MCR_PathFinder(rai::Configuration& _C, const rai::String _agent, const rai::String _goalFrame, const StringA& _obsList, bool _persist, bool _earlyExit, double _penalty, int _verbose)
+  : agent(_agent), verbose(_verbose), obsList(_obsList), penalty(_penalty), C(_C), persist(_persist), earlyExit(_earlyExit) {
 
     rai::Configuration C(_C);
     
@@ -95,9 +95,11 @@ double MCR_PathFinder::getEdgeData(const arr& from, const arr& to, uintA& constr
 // ============================================================================== //
 
 StringA MCR_PathFinder::solve(int maxIters, double stepSize, double connRadius){
-    // Clean up previous run
-    for(auto* n : nodes) delete n;
-    nodes.clear();
+    if (!persist) {
+        // Clean up previous run
+        for(auto* n : nodes) delete n;
+        nodes.clear();
+    }
 
     // Init Start/Goal
     startNode = new MCR_Node(startPos);
@@ -156,10 +158,10 @@ StringA MCR_PathFinder::solve(int maxIters, double stepSize, double connRadius){
                     newNode->neighbors.push_back({n, cost, edgeConstr});
                     
                     // Early exit check: if goal is now connected to start
-                    if((n == goalNode || newNode == goalNode) && !goalConnected){
+                    if(earlyExit && (n == goalNode || newNode == goalNode) && !goalConnected){
                         // TODO: Add better early exit
                         if(hasPathToGoal()){
-                            goalConnected = false; // this should be true to trigger the break
+                            goalConnected = true; // this should be true to trigger the break
                             if(verbose > 0) std::cout << "MCR: Early exit - goal connected at iteration " << k << std::endl;
                             break;
                         }

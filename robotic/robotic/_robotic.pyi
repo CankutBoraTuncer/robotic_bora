@@ -1301,7 +1301,7 @@ class MCR_PathFinder:
     """
     todo doc
     """
-    def __init__(self, Configuration: Config, agent: str, goalFrame: str, obsList: list[str], penalty: float = 500.0, verbose: int = 0) -> None:
+    def __init__(self, Configuration: Config, agent: str, goalFrame: str, obsList: list[str], persist: bool = False, earlyExit: bool = False, penalty: float = 500.0, verbose: int = 0) -> None:
         ...
     def solve(self, maxIters: int = 2000, stepSize: float = 0.5, connRadius: float = 1.5) -> StringA:
         ...

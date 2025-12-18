@@ -46,6 +46,8 @@ struct MCR_PathFinder {
   StringA obsList;
   uintA softObsIndices; 
   double penalty;
+  bool persist;
+  bool earlyExit;
   int verbose;
   arr bounds_lo = {-2, -2};
   arr bounds_up = {2, 2};
@@ -55,7 +57,7 @@ struct MCR_PathFinder {
   MCR_Node* startNode = nullptr;
   MCR_Node* goalNode = nullptr;
 
-  MCR_PathFinder(rai::Configuration& _C, const rai::String _agent, const rai::String _goalFrame, const StringA& _obsList, double _penalty=500.0, int _verbose=0);
+  MCR_PathFinder(rai::Configuration& _C, const rai::String _agent, const rai::String _goalFrame, const StringA& _obsList, bool _persist=false, bool _earlyExit=false, double _penalty=500.0, int _verbose=0);
 
   // Helpers
   void checkCollisions(const arr& q, bool& isHard, uintA& softHits);
