@@ -13,14 +13,12 @@
 
 #include "ConfigurationProblem.h"
 
-ConfigurationProblem::ConfigurationProblem(const rai::Configuration& _C, bool _computeCollisions, double _collisionTolerance, int _verbose, bool _isIndependent)
+ConfigurationProblem::ConfigurationProblem(const rai::Configuration& _C, bool _computeCollisions, double _collisionTolerance, int _verbose)
   : C(_C),
     computeAllCollisions(_computeCollisions),
     collisionTolerance(_collisionTolerance),
-    verbose(_verbose),
-    isIndependent(_isIndependent) {
+    verbose(_verbose) {
 
-      
   q0 = C.getJointState();
   limits = C.getJointLimits();
   max_step = zeros(limits.d1);

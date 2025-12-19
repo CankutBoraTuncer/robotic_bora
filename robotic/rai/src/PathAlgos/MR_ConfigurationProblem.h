@@ -11,8 +11,18 @@
 #include "../Kin/kin.h"
 #include "../KOMO/objective.h"
 #include "../Optim/NLP.h"
+#include "../Kin/kin.h"
+#include "../Kin/frame.h"
 
 #include <unordered_map>
+
+// Data structure to hold robot frame and its joint state
+struct Robot {
+  rai::String n;
+  arr x;
+  arr limits;
+  Robot(rai::String f, arr x, arr limits) : n(f), x(x), limits(limits) {}
+};
 
 struct ConfigurationProblem;
 
@@ -45,7 +55,8 @@ stdOutPipe(QueryResult)
 
 struct ConfigurationProblem {
   rai::Configuration C;
-  arr q0, limits, max_step;
+  arr q0, max_step;
+  rai::Array<Robot> robots;
 
   //what constraints are evaluated?
   rai::Array<shared_ptr<GroundedObjective>> objectives;
@@ -55,15 +66,14 @@ struct ConfigurationProblem {
   bool computeCollisionFeatures=true;
   uintA collisionPairs;
   double collisionTolerance;
+  StringA robotNames;
 
   //user info
   int verbose=0;
   uint evals=0;
 
-  ConfigurationProblem(const rai::Configuration& _C, bool _computeCollisions=true, double _collisionTolerance=1e-3, int _verbose=0);
-
-  void setExplicitCollisionPairs(const StringA& _collisionPairs);
-
-  shared_ptr<GroundedObjective> addObjective(const FeatureSymbol& feat, const StringA& frames, ObjectiveType type, const arr& scale=NoArr, const arr& target=NoArr);
+  ConfigurationProblem(const rai::Configuration& _C, const StringA& _robotNames, bool _computeCollisions=true, double _collisionTolerance=1e-3, int _verbose=0);
   shared_ptr<QueryResult> query(const arr& x);
+  shared_ptr<QueryResult> query(const Robot& r);
+  rai::Array<shared_ptr<QueryResult>> query_multi(rai::Array<Robot>& x);
 };
