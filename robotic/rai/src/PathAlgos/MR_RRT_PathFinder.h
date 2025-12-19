@@ -11,7 +11,7 @@
 #include "PathResult.h"
 #include "MR_ConfigurationProblem.h"
 #include "../Optim/NLP.h"
-#include "../Algo/ann.h"
+#include "MR_ann.h"
 #include "../Kin/kin.h"
 #include "../Kin/frame.h"
 
@@ -22,25 +22,22 @@ double corput(uint n, uint base);
 
 /// just a data structure, no algorithms
 struct RRT_SingleTree {
-  ANN ann;         //ann stores all points added to the tree in ann.X
+  MR_ANN ann;         //ann stores all points added to the tree in ann.X
   uintA parent;    //for each point we store the index of the parent node
   rai::Array<shared_ptr<QueryResult>> queries; //for each point we store the query result
-
-  //fields for display (GLDrawer..)
-  Mutex drawMutex;
 
   uint nearestID = UINT_MAX; //nearest node from the last 'getProposalToward' call!
 
   RRT_SingleTree(const rai::Array<Robot>& q0, const rai::Array<shared_ptr<QueryResult>>& q0_qr);
 
   //core method
-  double getNearest(const arr& target);
-  arr getProposalTowards(const arr& target, double stepsize);
+  double getNearest(const rai::Array<Robot>& target);
+  arr getProposalTowards(const rai::Array<Robot>& target, double stepsize);
 
-  arr getNewSample(const arr& target, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth);
+  arr getNewSample(const rai::Array<Robot>& target, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth);
 
   //trivial
-  uint add(const arr& q, uint parentID, const shared_ptr<QueryResult>& _qr);
+  uint add(const rai::Array<Robot>& q, uint parentID, const rai::Array<shared_ptr<QueryResult>>& _qr);
 
   //trivial access routines
   uint getParent(uint i) { return parent(i); }

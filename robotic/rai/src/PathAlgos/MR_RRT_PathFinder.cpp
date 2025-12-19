@@ -59,51 +59,69 @@ bool checkConnection(ConfigurationProblem& P,
 
 //===========================================================================
 
-RRT_SingleTree::RRT_SingleTree(const arr& q0, const shared_ptr<QueryResult>& q0_qr) {
+RRT_SingleTree::RRT_SingleTree(const rai::Array<Robot>& q0, const rai::Array<shared_ptr<QueryResult>>& q0_qr) {
 //  if(!q0_qr->isFeasible) LOG(0) <<"rooting RRT with infeasible start configuration -- that's likely to fail: query is:\n" <<*q0_qr;
   add(q0, 0, q0_qr);
 }
 
-uint RRT_SingleTree::add(const arr& q, uint parentID, const shared_ptr<QueryResult>& _qr) {
-  drawMutex.lock(RAI_HERE);
+//===========================================================================
+
+uint RRT_SingleTree::add(const rai::Array<Robot>& q, uint parentID, const rai::Array<shared_ptr<QueryResult>>& _qr) {
   ann.append(q);
   parent.append(parentID);
   queries.append(_qr);
-  disp3d.append(_qr->disp3d);
-  disp3d.reshape(-1, 3);
+
 
   CHECK_EQ(parent.N, ann.X.d0, "");
   CHECK_EQ(queries.N, ann.X.d0, "");
   //CHECK_EQ(disp3d.d0, ann.X.d0, "");
-  drawMutex.unlock();
   return parent.N-1;
 }
 
-double RRT_SingleTree::getNearest(const arr& target) {
+//===========================================================================
+
+double RRT_SingleTree::getNearest(const rai::Array<Robot>& target) {
   //find NN
   nearestID = ann.getNN(target);
-  return length(target - ann.X[nearestID]);
+  // Concat the joint states of the target
+  arr targetStates;
+  for(const auto& robot : target) {
+    targetStates.append(robot.x);
+  }
+  return length(targetStates - ann.X[nearestID]);
 }
 
-arr RRT_SingleTree::getProposalTowards(const arr& target, double stepsize) {
+//===========================================================================
+
+arr RRT_SingleTree::getProposalTowards(const rai::Array<Robot>& target, double stepsize) {
   //find NN
   nearestID = ann.getNN(target);
 
   //compute default step
-  arr delta = target - ann.X[nearestID]; //difference vector between q and nearest neighbor
+  arr targetStates;
+  for(const auto& robot : target) {
+    targetStates.append(robot.x);
+  }
+  arr delta = targetStates - ann.X[nearestID]; //difference vector between q and nearest neighbor
   double dist = length(delta);
   if(dist>stepsize)  delta *= stepsize/dist;
 
   return getNode(nearestID) + delta;
 }
 
-arr RRT_SingleTree::getNewSample(const arr& target, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth) {
+//===========================================================================
+
+arr RRT_SingleTree::getNewSample(const rai::Array<Robot>& target, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth) {
   //find NN
   nearestID = ann.getNN(target);
   std::shared_ptr<QueryResult> qr = queries(nearestID);
 
   //compute default step
-  arr delta = target - getNode(nearestID);
+  arr targetStates;
+  for(const auto& robot : target) {
+    targetStates.append(robot.x);
+  }
+  arr delta = targetStates - getNode(nearestID);
   double dist = length(delta);
   if(dist>stepsize) delta *= stepsize/dist;
 
@@ -126,7 +144,16 @@ arr RRT_SingleTree::getNewSample(const arr& target, double stepsize, double p_si
     d *= rnd.uni(stepsize, 2.) / length(d);
     arr targ = getNode(nearestID) + d;
     bool tmp;
-    return getNewSample(targ, stepsize, p_sideStep, tmp, recursionDepth + 1);
+
+    // Regenerate the Robot array for the concatanated joint state
+    rai::Array<Robot> targRobots;
+    uint offset = 0;
+    for(const auto& robot : target) {
+      uint dim = robot.x.N;
+      targRobots.append(Robot(robot.n,targ.sub(offset, offset+dim-1), robot.limits));
+      offset += dim;
+    }
+    return getNewSample(targRobots, stepsize, p_sideStep, tmp, recursionDepth + 1);
   } else {
     return getNode(nearestID) + delta;
   }
@@ -134,6 +161,8 @@ arr RRT_SingleTree::getNewSample(const arr& target, double stepsize, double p_si
   HALT("shouldn't be here");
   return NoArr;
 }
+
+//===========================================================================
 
 arr RRT_SingleTree::getPathFromNode(uint fromID) {
   arr path;
@@ -274,6 +303,8 @@ MR_RRT_PathFinder::MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& _goals
     DISP.copy(P.C);
   }
 }
+
+//===========================================================================
 
 void MR_RRT_PathFinder::planForward(const arr& q0, const arr& qT) {
   bool success=false;
