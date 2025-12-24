@@ -11,6 +11,7 @@
 #include "types.h"
 #include "../PathAlgos/RRT_PathFinder.h"
 #include "../PathAlgos/MCR_PathFinder.h"
+#include "../PathAlgos/D_RRT_PathFinder.h"
 
 void init_PathAlgos(pybind11::module& m) {
   
@@ -39,6 +40,14 @@ void init_PathAlgos(pybind11::module& m) {
           pybind11::arg("stepSize")=0.5, 
           pybind11::arg("connRadius")=1.5)
     ;
+    // 3. New D_PathFinder Class Binding    
+  pybind11::class_<rai::D_PathFinder, std::shared_ptr<rai::D_PathFinder>>(m, "D_PathFinder", "todo doc")
+      .def(pybind11::init<>())
+      .def("setProblem", &rai::D_PathFinder::setProblem, "", pybind11::arg("Configuration"), pybind11::arg("starts"), pybind11::arg("goals"), pybind11::arg("frames"), pybind11::arg("collisionTolerance")=1e-4, pybind11::arg("isIndependent")=false)
+      .def("setExplicitCollisionPairs", &rai::D_PathFinder::setExplicitCollisionPairs, "only after setProblem", pybind11::arg("collisionPairs"))
+      .def("solve", &rai::D_PathFinder::solve, "")
+      .def("get_resampledPath", &rai::D_PathFinder::get_resampledPath, "")
+      ;
 }
 
 #endif

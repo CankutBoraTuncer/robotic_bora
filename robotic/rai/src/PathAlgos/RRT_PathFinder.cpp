@@ -389,6 +389,7 @@ void revertPath(arr& path) {
   }
 }
 
+
 arr RRT_PathFinder::run(double timeBudget) {
   planConnect();
   return path;
@@ -398,7 +399,7 @@ namespace rai {
 
 void PathFinder::setProblem(const Configuration& C, const arr& starts, const arr& goals, double collisionTolerance, bool isIndependent) {
   if(collisionTolerance<0.) collisionTolerance = rai::getParameter<double>("rrt/collisionTolerance", 1e-4);
-  problem = make_shared<ConfigurationProblem>(C, true, collisionTolerance, 1, isIndependent);
+  problem = make_shared<ConfigurationProblem>(C, true, collisionTolerance, 1);
   problem->verbose=0;
   rrtSolver = make_shared<RRT_PathFinder>(*problem, starts, goals);
   cout <<"RRT PathFinder: stepsize=" <<rrtSolver->stepsize

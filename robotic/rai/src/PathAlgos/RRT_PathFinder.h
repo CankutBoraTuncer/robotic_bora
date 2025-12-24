@@ -15,7 +15,12 @@
 
 // Add this near the top of the header, outside any class
 double corput(uint n, uint base);
-
+bool checkConnection(ConfigurationProblem& P,
+                     const arr& start,
+                     const arr& end,
+                     const uint num,
+                     const bool binary);
+                     
 /// just a data structure, no algorithms
 struct RRT_SingleTree {
   ANN ann;         //ann stores all points added to the tree in ann.X

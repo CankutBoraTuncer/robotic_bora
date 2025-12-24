@@ -12,7 +12,7 @@ __all__ = ['ArgWord', 'BotOp', 'CameraView', 'CameraViewSensor', 'Config',
            'NLP_Factory', 'NLP_Sampler', 'NLP_Solver', 'NLP_SolverID', 
            'NLP_SolverOptions', 'OT', 'OptBench_Skeleton_Handover', 
            'OptBench_Skeleton_Pick', 'OptBench_Skeleton_StackAndBalance', 
-           'OptBenchmark_InvKin_Endeff', 'PathFinder', 'MCR_PathFinder', 'ST', 'SY', 'Simulation', 
+           'OptBenchmark_InvKin_Endeff', 'PathFinder', 'MCR_PathFinder', 'D_PathFinder', 'ST', 'SY', 'Simulation', 
            'SimulationEngine', 'Skeleton', 'SolverReturn', 'TAMP_Provider', 
            'compiled', 'default_Logic2KOMO_Translator', 'default_TAMP_Provider', 
            'depthImage2PointCloud', 'find_critical_objects', 'params_add', 
@@ -1296,7 +1296,6 @@ class PathFinder:
         ...
     def solve(self) -> SolverReturn:
         ...
-
 class MCR_PathFinder:
     """
     todo doc
@@ -1304,6 +1303,22 @@ class MCR_PathFinder:
     def __init__(self, Configuration: Config, agent: str, goalFrame: str, obsList: list[str], persist: bool = False, earlyExit: bool = False, penalty: float = 500.0, verbose: int = 0) -> None:
         ...
     def solve(self, maxIters: int = 2000, stepSize: float = 0.5, connRadius: float = 1.5) -> StringA:
+        ...
+class D_PathFinder:
+    """
+    todo doc
+    """
+    def __init__(self) -> None:
+        ...
+    def get_resampledPath(self, arg0: int) -> arr:
+        ...
+    def setExplicitCollisionPairs(self, collisionPairs: StringA) -> None:
+        """
+        only after setProblem
+        """
+    def setProblem(self, Configuration: Config, starts: arr, goals: arr, frames: arr, collisionTolerance: float = 0.0001, isIndependent: bool = False) -> None:
+        ...
+    def solve(self) -> SolverReturn:
         ...
 class ST:
     """

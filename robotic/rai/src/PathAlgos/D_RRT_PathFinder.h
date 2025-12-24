@@ -9,35 +9,35 @@
 #pragma once
 
 #include "PathResult.h"
-#include "MR_ConfigurationProblem.h"
+#include "RRT_PathFinder.h"
+#include "ConfigurationProblem.h"
 #include "../Optim/NLP.h"
-#include "MR_ann.h"
-#include "../Kin/kin.h"
+#include "../Algo/ann.h"
 #include "../Kin/frame.h"
 
-// Add this near the top of the header, outside any class
-double corput(uint n, uint base);
-
-//===========================================================================
 
 /// just a data structure, no algorithms
-struct RRT_SingleTree {
-  MR_ANN ann;         //ann stores all points added to the tree in ann.X
+struct D_RRT_SingleTree {
+  ANN ann;         //ann stores all points added to the tree in ann.X
   uintA parent;    //for each point we store the index of the parent node
   rai::Array<shared_ptr<QueryResult>> queries; //for each point we store the query result
 
+  //fields for display (GLDrawer..)
+  arr disp3d;
+  Mutex drawMutex;
+
   uint nearestID = UINT_MAX; //nearest node from the last 'getProposalToward' call!
 
-  RRT_SingleTree(const rai::Array<Robot>& q0, const rai::Array<shared_ptr<QueryResult>>& q0_qr);
+  D_RRT_SingleTree(const arr& q0, const shared_ptr<QueryResult>& q0_qr);
 
   //core method
-  double getNearest(const rai::Array<Robot>& target);
-  arr getProposalTowards(const rai::Array<Robot>& target, double stepsize);
+  double getNearest(const arr& target);
+  arr getProposalTowards(const arr& target, double stepsize);
 
-  arr getNewSample(const rai::Array<Robot>& target, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth);
+  arr getNewSample(const arr& target, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth);
 
   //trivial
-  uint add(const rai::Array<Robot>& q, uint parentID, const rai::Array<shared_ptr<QueryResult>>& _qr);
+  uint add(const arr& q, uint parentID, const shared_ptr<QueryResult>& _qr);
 
   //trivial access routines
   uint getParent(uint i) { return parent(i); }
@@ -54,10 +54,10 @@ struct RRT_SingleTree {
 //===========================================================================
 
 ///algorithms
-struct MR_RRT_PathFinder {
+struct D_RRT_PathFinder {
   ConfigurationProblem& P;
-  shared_ptr<RRT_SingleTree> rrt0;
-  shared_ptr<RRT_SingleTree> rrtT;
+  shared_ptr<D_RRT_SingleTree> rrt0;
+  shared_ptr<D_RRT_SingleTree> rrtT;
 
   //parameters
   double stepsize;
@@ -67,8 +67,7 @@ struct MR_RRT_PathFinder {
   double p_forwardStep=.5;
   double p_sideStep=.0;
   double p_backwardStep=.0;
-  int robotCount = 1;
-
+  FrameL frames;
 
   //counters
   uint iters=0;
@@ -77,15 +76,15 @@ struct MR_RRT_PathFinder {
   //output
   arr path;
 
-  MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& goals, double _stepsize = -1., int _subsampleChecks=-1, int maxIters=-1, int _verbose=-1);
-  ~MR_RRT_PathFinder() {}
+  D_RRT_PathFinder(ConfigurationProblem& _P, const arr& starts, const arr& goals, double _stepsize = -1., int _subsampleChecks=-1, int maxIters=-1, int _verbose=-1);
+  ~D_RRT_PathFinder() {}
 
   int stepConnect();
   void planForward(const arr& q0, const arr& qT);
   arr planConnect(); //default numbers: equivalent to standard bidirect
 
-  bool growTreeTowardsRandom(RRT_SingleTree& rrt);
-  bool growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& rrt_B);
+  bool growTreeTowardsRandom(D_RRT_SingleTree& rrt);
+  bool growTreeToTree(D_RRT_SingleTree& rrt_A, D_RRT_SingleTree& rrt_B);
 
   arr run(double timeBudget=1.); //obsolete
 
@@ -97,13 +96,18 @@ struct MR_RRT_PathFinder {
 
 namespace rai {
 
-struct MR_PathFinder : NonCopyable {
+struct D_PathFinder : NonCopyable {
   std::shared_ptr<ConfigurationProblem> problem;
-  std::shared_ptr<MR_RRT_PathFinder> rrtSolver;
+  std::shared_ptr<D_RRT_PathFinder> rrtSolver;
   std::shared_ptr<SolverReturn> ret;
 
-  void setProblem(const rai::Configuration& C, const StringA& _robotNames, const arr& goals, double collisionTolerance=-1.);
+  void setProblem(const rai::Configuration& C, const arr& starts, const arr& goals, const arr& frames, double collisionTolerance=-1., bool isIndependent=false);
+
+  void setExplicitCollisionPairs(const StringA& collisionPairs);
+
   shared_ptr<SolverReturn> solve();
+
+  arr get_resampledPath(uint T);
 };
 
 } //namespace
