@@ -67,5 +67,5 @@ struct ConfigurationProblem {
 
   shared_ptr<GroundedObjective> addObjective(const FeatureSymbol& feat, const StringA& frames, ObjectiveType type, const arr& scale=NoArr, const arr& target=NoArr);
   shared_ptr<QueryResult> query(const arr& x);
-  shared_ptr<QueryResult> query(const arr& x, const arr& frame);
+  shared_ptr<QueryResult> query(const arr& x, const std::map<rai::String, arr>& frame, uint depth);
 };

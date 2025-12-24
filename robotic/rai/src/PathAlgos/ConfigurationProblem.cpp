@@ -174,7 +174,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(const arr& x) {
 
 // ---------------------------------------------------------------------------
 
-shared_ptr<QueryResult> ConfigurationProblem::query(const arr& x, const arr& frame) {
+shared_ptr<QueryResult> ConfigurationProblem::query(const arr& x, const std::map<rai::String, arr>& frame, uint depth) {
   if(limits.N) {
     for(uint i=0; i<x.N; i++) {
       if(limits(1, i)>limits(0, i) && (x.elem(i)<limits(0, i) || x.elem(i)>limits(1, i))) {
@@ -183,7 +183,10 @@ shared_ptr<QueryResult> ConfigurationProblem::query(const arr& x, const arr& fra
     }
   }
 
-  C.getFrame("ego1")->setPosition(frame);
+  for(auto& [key, value] : frame) {
+    C.getFrame(key)->setPosition(value[depth]);
+  }
+  
   C.setJointState(x);
 
   if(computeAllCollisions) {

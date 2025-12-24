@@ -67,7 +67,8 @@ struct D_RRT_PathFinder {
   double p_forwardStep=.5;
   double p_sideStep=.0;
   double p_backwardStep=.0;
-  arr frames;
+  std::map<rai::String, arr> frames;
+  uint maxDepth=0;
 
   //counters
   uint iters=0;
@@ -101,7 +102,7 @@ struct D_PathFinder : NonCopyable {
   std::shared_ptr<D_RRT_PathFinder> rrtSolver;
   std::shared_ptr<SolverReturn> ret;
 
-  void setProblem(const rai::Configuration& C, const arr& starts, const arr& goals, const arr& frames, double collisionTolerance=-1., bool isIndependent=false);
+  void setProblem(const rai::Configuration& C, const arr& starts, const arr& goals, const std::map<rai::String, arr>& frames, double collisionTolerance=-1., bool isIndependent=false);
 
   void setExplicitCollisionPairs(const StringA& collisionPairs);
 

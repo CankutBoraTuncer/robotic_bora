@@ -173,11 +173,11 @@ bool D_RRT_PathFinder::growTreeToTree(D_RRT_SingleTree& rrt_A, D_RRT_SingleTree&
   if(rrt_A.parent.N > 1) {
     // Update depth based on parent and make sure depth is smaller than length of frames
     depth = rrt_A.queries(parentID)->depth + 1;
-    if(depth >= frames.d0) depth = frames.d0 - 1;
+    if(depth >= maxDepth) depth = maxDepth - 1;
   }
 
   //evaluate the sample
-  auto qr = P.query(q, frames[depth]);
+  auto qr = P.query(q, frames, depth);
 
   if(isForwardStep) {  n_forwardStep++; if(qr->isFeasible) n_forwardStepGood++; }
   if(!isForwardStep) {  n_rndStep++; if(qr->isFeasible) n_rndStepGood++; }
@@ -363,12 +363,13 @@ arr D_RRT_PathFinder::run(double timeBudget) {
 
 namespace rai {
 
-void D_PathFinder::setProblem(const Configuration& C, const arr& starts, const arr& goals, const arr& frames, double collisionTolerance, bool isIndependent) {
+void D_PathFinder::setProblem(const Configuration& C, const arr& starts, const arr& goals, const std::map<rai::String, arr>& frames, double collisionTolerance, bool isIndependent) {
   if(collisionTolerance<0.) collisionTolerance = rai::getParameter<double>("rrt/collisionTolerance", 1e-4);
   problem = make_shared<ConfigurationProblem>(C, true, collisionTolerance, 1);
   problem->verbose=0;
   rrtSolver = make_shared<D_RRT_PathFinder>(*problem, starts, goals);
   rrtSolver->frames = frames;
+  rrtSolver->maxDepth = frames.empty() ? 0 : frames.begin()->second.d0;
 
   cout <<"RRT PathFinder: stepsize=" <<rrtSolver->stepsize
        <<", subsampleChecks=" <<rrtSolver->subsampleChecks
