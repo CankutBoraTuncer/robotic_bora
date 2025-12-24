@@ -171,6 +171,131 @@ shared_ptr<QueryResult> ConfigurationProblem::query(const arr& x) {
   return qr;
 }
 
+
+// ---------------------------------------------------------------------------
+
+shared_ptr<QueryResult> ConfigurationProblem::query(const arr& x, const arr& frame) {
+  if(limits.N) {
+    for(uint i=0; i<x.N; i++) {
+      if(limits(1, i)>limits(0, i) && (x.elem(i)<limits(0, i) || x.elem(i)>limits(1, i))) {
+        //LOG(-1) <<"QUERY OUT OF LIMIT: joint " <<i <<": " <<x.elem(i) <<' ' <<limits[i];
+      }
+    }
+  }
+
+  C.getFrame("ego1")->setPosition(frame);
+  C.setJointState(x);
+
+  if(computeAllCollisions) {
+    //C.stepSwift();
+    C.stepFcl();
+    //for(rai::Proxy& p:C.proxies) p.ensure_coll();
+  } else if(collisionPairs.N) {
+    C.proxies.resize(collisionPairs.d0);
+    for(uint i=0; i<collisionPairs.d0; i++) {
+      C.proxies(i).a = C.frames(collisionPairs(i, 0));
+      C.proxies(i).b = C.frames(collisionPairs(i, 1));
+      C.proxies(i).d = -0.;
+    }
+    for(rai::Proxy& p:C.proxies) p.calc_coll();
+    C._state_proxies_isGood = true;
+  }
+  evals++;
+
+  //C.view();
+
+  shared_ptr<QueryResult> qr = make_shared<QueryResult>();
+
+  if(!computeCollisionFeatures) {
+#if 1
+    double D=0.;
+    for(rai::Proxy& p:C.proxies){
+      p.calc_coll();
+      if(p.d<0.) D -= p.d;
+    }
+    qr->totalCollision = D;
+    qr->isFeasible = (qr->totalCollision<collisionTolerance);
+#else
+    qr->totalCollision = C.getTotalPenetration();
+    qr->isFeasible = (qr->totalCollision<collisionTolerance);
+#endif
+  } else {
+    //collision features
+    uint N = C.proxies.N;
+    qr->collisions.resize(N, 2).setZero();
+    qr->coll_y.resize(N, 1).setZero();
+    qr->coll_J.resize(N, 1, x.N).setZero();
+    qr->normal_y.resize(N, 3).setZero();
+    qr->normal_J.resize(N, 3, x.N).setZero();
+    qr->side_J.resize(N, 3, x.N).setZero();
+
+    uint i=0;
+    for(const rai::Proxy& p:C.proxies) {
+      qr->collisions[i] =  uintA{p.a->ID, p.b->ID};
+      arr Jp1, Jp2, Jx1, Jx2;
+      {
+        C.jacobian_pos(Jp1, C(p.a->ID), p.collision->p1);
+        C.jacobian_pos(Jp2, C(p.b->ID), p.collision->p2);
+        C.jacobian_angular(Jx1, C(p.a->ID));
+        C.jacobian_angular(Jx2, C(p.b->ID));
+      }
+      p.collision->kinDistance(qr->coll_y[i].noconst(), qr->coll_J[i].noconst(), Jp1, Jp2);
+      p.collision->kinNormal(qr->normal_y[i].noconst(), qr->normal_J[i].noconst(), Jp1, Jp2, Jx1, Jx2);
+
+      arr a, b, Ja, Jb;
+      {
+        C.kinematicsPos(a, Ja, C(p.a->ID));
+        C.kinematicsPos(b, Jb, C(p.b->ID));
+      }
+#if 0
+      arr z = a-b;
+      z /= length(z);
+#else
+      arr z = qr->normal_y[i];
+#endif
+      qr->side_J[i] = (eye(3) - (z^z))* (Ja - Jb);
+
+      i++;
+    }
+    CHECK_EQ(i, N, "");
+    qr->coll_J.reshape(qr->coll_y.N, x.N);
+
+    //is feasible?
+    qr->isFeasible = (!qr->coll_y.N || min(qr->coll_y)>=-collisionTolerance);
+
+    //goal features
+    N=0;
+    for(shared_ptr<GroundedObjective>& ob : objectives) N += ob->feat->dim(ob->frames);
+    qr->goal_y.resize(N);
+    qr->goal_J.resize(N, x.N);
+
+    i=0;
+    //  arr z, Jz;
+    for(shared_ptr<GroundedObjective>& ob : objectives) {
+      arr z = ob->feat->eval(ob->frames);
+      for(uint j=0; j<z.N; j++) {
+        qr->goal_y(i+j) = z(j);
+        qr->goal_J[i+j] = z.J()[j];
+      }
+      i += z.N;
+    }
+    CHECK_EQ(i, N, "");
+
+    //is goal?
+    qr->isGoal= (absMax(qr->goal_y)<1e-2);
+  }
+
+  //display (link of last joint)
+  qr->disp3d = C.activeDofs.elem(-1)->frame->getPosition();
+  if(verbose) {
+    C.view(verbose>1, STRING("ConfigurationProblem query:\n" <<*qr));
+  }
+
+  return qr;
+}
+
+// ---------------------------------------------------------------------------
+
 void QueryResult::getViolatedContacts(arr& y, arr& J, double margin) {
   uintA violated;
   for(uint i=0; i<coll_y.N; i++) if(coll_y.elem(i)<margin) violated.append(i);

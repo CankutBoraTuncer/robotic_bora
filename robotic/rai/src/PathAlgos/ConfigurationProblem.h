@@ -11,7 +11,7 @@
 #include "../Kin/kin.h"
 #include "../KOMO/objective.h"
 #include "../Optim/NLP.h"
-
+#include "../Kin/frame.h"
 #include <unordered_map>
 
 struct ConfigurationProblem;
@@ -29,6 +29,7 @@ struct QueryResult {
   double totalCollision=0.;
   bool isGoal=true;
   bool isFeasible=true;
+  uint depth = 0;
 
   //optional a 3D coordinate for display
   arr disp3d;
@@ -66,4 +67,5 @@ struct ConfigurationProblem {
 
   shared_ptr<GroundedObjective> addObjective(const FeatureSymbol& feat, const StringA& frames, ObjectiveType type, const arr& scale=NoArr, const arr& target=NoArr);
   shared_ptr<QueryResult> query(const arr& x);
+  shared_ptr<QueryResult> query(const arr& x, const arr& frame);
 };
