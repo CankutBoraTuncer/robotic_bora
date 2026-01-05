@@ -12,7 +12,7 @@
 #include "../PathAlgos/RRT_PathFinder.h"
 #include "../PathAlgos/MCR_PathFinder.h"
 #include "../PathAlgos/D_RRT_PathFinder.h"
-
+#include "../PathAlgos/MR_RRT_PathFinder.h"
 void init_PathAlgos(pybind11::module& m) {
   
   // 1. Existing PathFinder Class Binding
@@ -47,6 +47,18 @@ void init_PathAlgos(pybind11::module& m) {
       .def("setExplicitCollisionPairs", &rai::D_PathFinder::setExplicitCollisionPairs, "only after setProblem", pybind11::arg("collisionPairs"))
       .def("solve", &rai::D_PathFinder::solve, "")
       .def("get_resampledPath", &rai::D_PathFinder::get_resampledPath, "")
+      ;
+  
+  // 4. New MR_RRT_PathFinder Class Binding    
+  pybind11::class_<rai::MR_PathFinder, std::shared_ptr<rai::MR_PathFinder>>(m, "MR_PathFinder", "todo doc")
+      .def(pybind11::init<>())
+    .def("setProblem", &rai::MR_PathFinder::setProblem, "",
+         pybind11::arg("Configuration"),
+         pybind11::arg("starts"),
+         pybind11::arg("goals"),
+         pybind11::arg("robots"),
+         pybind11::arg("collisionTolerance")=1e-4)
+      .def("solve", &rai::MR_PathFinder::solve, "")
       ;
 }
 

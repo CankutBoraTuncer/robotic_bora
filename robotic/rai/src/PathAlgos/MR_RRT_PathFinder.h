@@ -9,89 +9,11 @@
 #pragma once
 
 #include "PathResult.h"
-#include "MR_ConfigurationProblem.h"
+#include "RRT_PathFinder.h"
+#include "D_RRT_PathFinder.h"
+#include "ConfigurationProblem.h"
 #include "../Optim/NLP.h"
-#include "MR_ann.h"
-#include "../Kin/kin.h"
-#include "../Kin/frame.h"
-
-// Add this near the top of the header, outside any class
-double corput(uint n, uint base);
-
-//===========================================================================
-
-/// just a data structure, no algorithms
-struct RRT_SingleTree {
-  MR_ANN ann;         //ann stores all points added to the tree in ann.X
-  uintA parent;    //for each point we store the index of the parent node
-  rai::Array<shared_ptr<QueryResult>> queries; //for each point we store the query result
-
-  uint nearestID = UINT_MAX; //nearest node from the last 'getProposalToward' call!
-
-  RRT_SingleTree(const rai::Array<Robot>& q0, const rai::Array<shared_ptr<QueryResult>>& q0_qr);
-
-  //core method
-  double getNearest(const rai::Array<Robot>& target);
-  arr getProposalTowards(const rai::Array<Robot>& target, double stepsize);
-
-  arr getNewSample(const rai::Array<Robot>& target, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth);
-
-  //trivial
-  uint add(const rai::Array<Robot>& q, uint parentID, const rai::Array<shared_ptr<QueryResult>>& _qr);
-
-  //trivial access routines
-  uint getParent(uint i) { return parent(i); }
-  uint getNumberNodes() { return ann.X.d0; }
-  uint getDim() { return ann.X.d1; }
-  arr getNode(uint i) { return ann.X[i].copy(); }
-  arr getLast() { return ann.X[ann.X.d0-1].copy(); }
-  arr getRandomNode() { return ann.X[rnd(ann.X.d0)].copy(); }
-  arr getPathFromNode(uint fromID);
-
-  arr getSideStep(std::shared_ptr<QueryResult> qr);
-};
-
-//===========================================================================
-
-///algorithms
-struct MR_RRT_PathFinder {
-  ConfigurationProblem& P;
-  shared_ptr<RRT_SingleTree> rrt0;
-  shared_ptr<RRT_SingleTree> rrtT;
-
-  //parameters
-  double stepsize;
-  int maxIters=5000;
-  int verbose;
-  int subsampleChecks=0;
-  double p_forwardStep=.5;
-  double p_sideStep=.0;
-  double p_backwardStep=.0;
-  int robotCount = 1;
-
-
-  //counters
-  uint iters=0;
-  uint n_backStep=0, n_backStepGood=0, n_sideStep=0, n_sideStepGood=0, n_forwardStep=0, n_forwardStepGood=0, n_rndStep=0, n_rndStepGood=0;
-
-  //output
-  arr path;
-
-  MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& goals, double _stepsize = -1., int _subsampleChecks=-1, int maxIters=-1, int _verbose=-1);
-  ~MR_RRT_PathFinder() {}
-
-  int stepConnect();
-  void planForward(const arr& q0, const arr& qT);
-  arr planConnect(); //default numbers: equivalent to standard bidirect
-
-  bool growTreeTowardsRandom(RRT_SingleTree& rrt);
-  bool growTreeToTree(RRT_SingleTree& rrt_A, RRT_SingleTree& rrt_B);
-
-  arr run(double timeBudget=1.); //obsolete
-
- private:
-  rai::Configuration DISP;
-};
+#include "../Algo/ann.h"
 
 //===========================================================================
 
@@ -99,15 +21,18 @@ namespace rai {
 
 struct MR_PathFinder : NonCopyable {
   std::shared_ptr<ConfigurationProblem> problem;
-  std::shared_ptr<MR_RRT_PathFinder> rrtSolver;
   std::shared_ptr<SolverReturn> ret;
-
-  void setProblem(const rai::Configuration& C, const StringA& _robotNames, const arr& goals, double collisionTolerance=-1.);
+  std::shared_ptr<RRT_PathFinder> rrtSolver;
+  rai::Configuration C;
+  
+  std::map<rai::String, arr> robots;
+  arr starts;
+  arr goals;
+   
+  void setProblem(const rai::Configuration& C, const arr& starts, const arr& goals, const std::map<rai::String, arr>& robots, double collisionTolerance=-1.);
   shared_ptr<SolverReturn> solve();
+  shared_ptr<SolverReturn> shortcutPath(const arr& path);
+
 };
 
 } //namespace
-
-//===========================================================================
-
-void revertPath(arr& path);

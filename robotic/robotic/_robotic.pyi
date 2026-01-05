@@ -12,7 +12,7 @@ __all__ = ['ArgWord', 'BotOp', 'CameraView', 'CameraViewSensor', 'Config',
            'NLP_Factory', 'NLP_Sampler', 'NLP_Solver', 'NLP_SolverID', 
            'NLP_SolverOptions', 'OT', 'OptBench_Skeleton_Handover', 
            'OptBench_Skeleton_Pick', 'OptBench_Skeleton_StackAndBalance', 
-           'OptBenchmark_InvKin_Endeff', 'PathFinder', 'MCR_PathFinder', 'D_PathFinder', 'ST', 'SY', 'Simulation', 
+           'OptBenchmark_InvKin_Endeff', 'PathFinder', 'MCR_PathFinder', 'D_PathFinder', 'MR_PathFinder', 'ST', 'SY', 'Simulation', 
            'SimulationEngine', 'Skeleton', 'SolverReturn', 'TAMP_Provider', 
            'compiled', 'default_Logic2KOMO_Translator', 'default_TAMP_Provider', 
            'depthImage2PointCloud', 'find_critical_objects', 'params_add', 
@@ -1317,6 +1317,16 @@ class D_PathFinder:
         only after setProblem
         """
     def setProblem(self, Configuration: Config, starts: arr, goals: arr, frames: arr, collisionTolerance: float = 0.0001, isIndependent: bool = False) -> None:
+        ...
+    def solve(self) -> SolverReturn:
+        ...
+class MR_PathFinder:
+    """
+    todo doc
+    """
+    def __init__(self) -> None:
+        ...
+    def setProblem(self, Configuration: Config, starts: arr, goals: arr, robots: dict, collisionTolerance: float = 0.0001) -> None:
         ...
     def solve(self) -> SolverReturn:
         ...
