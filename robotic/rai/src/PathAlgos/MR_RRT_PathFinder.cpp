@@ -104,6 +104,71 @@ arr MR_RRT_SingleTree::getNewSample(const arr& target, double stepsize, double p
   return NoArr;
 }
 
+// -----------------------------------------------------------------
+
+
+arr MR_RRT_SingleTree::getNewSample(const arr& target, const std::map<rai::String, arr>& robots, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth) {
+  //find NN
+  nearestID = ann.getNN(target);
+  std::shared_ptr<QueryResult> qr = queries(nearestID);
+
+
+  const double vmax = stepsize;
+  arr delta = target - getNode(nearestID);
+
+  for (const auto& [robot, jointMask] : robots) {
+
+    // compute norm over this robot's joints only
+    double dist2 = 0.0;
+    for (uint i = 0; i < jointMask.N; ++i) {
+      if (jointMask(i) == 1) dist2 += delta(i) * delta(i);
+    }
+
+    double dist = sqrt(dist2);
+    if (dist < 1e-12) continue;            // nothing to do
+
+    if (dist > vmax) {
+      double rat = vmax / dist;            // cap to vmax
+      for (uint i = 0; i < jointMask.N; ++i) {
+        if (jointMask(i) == 1) delta(i) *= rat;
+      }
+    }
+  }
+
+
+
+
+
+
+  //without side stepping, we're done
+  isSideStep = false;
+  if(p_sideStep<=0. || recursionDepth >= 3) return getNode(nearestID) + delta;
+
+  //check whether this is a predicted collision
+  bool predictedCollision=false;
+  if(qr->coll_y.N) {
+    arr y = qr->coll_y + qr->coll_J * delta;
+    if(min(y)<0.) predictedCollision = true;
+  }
+
+  if(predictedCollision && p_sideStep>0. && rnd.uni()<p_sideStep) {
+    isSideStep=true;
+
+    //compute new target
+    arr d = qr->getSideStep();
+    d *= rnd.uni(stepsize, 2.) / length(d);
+    arr targ = getNode(nearestID) + d;
+    bool tmp;
+    return getNewSample(targ, stepsize, p_sideStep, tmp, recursionDepth + 1);
+  } else {
+    return getNode(nearestID) + delta;
+  }
+
+  HALT("shouldn't be here");
+  return NoArr;
+}
+
+// -----------------------------------------------------------------
 arr MR_RRT_SingleTree::getPathFromNode(uint fromID) {
   arr path;
   uint node = fromID;
@@ -138,14 +203,17 @@ bool MR_RRT_PathFinder::growTreeTowardsRandom(MR_RRT_SingleTree& rrt) {
   return false;
 }
 
-bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTree& rrt_B) {
+bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTree& rrt_B, bool forward) {
   bool isSideStep, isForwardStep;
+  arr qG;
   //decide on a target: forward or random
   arr t;
-  if(rnd.uni()<0.5) {
+  if(rnd.uni()<.5) {
     t = rrt_B.getRandomNode();
+    qG = forward ? qT : t;
     isForwardStep = true;
   } else {
+    qG = forward ? qT : q0;
 #if 1
     t.resize(rrt_A.getNode(0).N);
     for(uint i=0; i<t.N; i++) {
@@ -161,7 +229,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   }
 
   //sample configuration towards target, possibly sideStepping
-  arr q = rrt_A.getNewSample(t, stepsize, p_sideStep, isSideStep, 0);
+  arr q = rrt_A.getNewSample(t, robots, stepsize, p_sideStep, isSideStep, 0);
   uint parentID = rrt_A.nearestID;
 
   //special rule: if parent is already in collision, isFeasible = smaller collisions
@@ -170,17 +238,18 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   if(pr->totalCollision>P.collisionTolerance) P.collisionTolerance = pr->totalCollision + 1e-6;
 
   //evaluate the sample
-  auto qr = P.query(q, robots, qT);
+  auto qr = P.query(q, robots, qG, stepsize, subsampleChecks, isForwardStep);
 
   if(isForwardStep) {  n_forwardStep++; if(qr->isFeasible) n_forwardStepGood++; }
   if(!isForwardStep) {  n_rndStep++; if(qr->isFeasible) n_rndStepGood++; }
   if(isSideStep) {  n_sideStep++; if(qr->isFeasible) n_sideStepGood++; }
 
+
   //if infeasible, make a backward step from the sample configuration
   if(!qr->isFeasible && p_backwardStep>0. && rnd.uni()<p_backwardStep) {
     t = q + qr->getBackwardStep();
-    q = rrt_A.getNewSample(t, stepsize, p_sideStep, isSideStep, 0);
-    qr = P.query(q);
+    q = rrt_A.getNewSample(t, robots,stepsize, p_sideStep, isSideStep, 0);
+    qr = P.query(q, robots, qG, stepsize, subsampleChecks, isForwardStep);
     n_backStep++; if(qr->isFeasible) n_backStepGood++;
     if(isSideStep) {  n_sideStep++; if(qr->isFeasible) n_sideStepGood++; }
   };
@@ -196,9 +265,29 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   //finally adding the new node to the tree
   if(qr->isFeasible){
     rrt_A.add(q, parentID, qr);
-    double dist = rrt_B.getNearest(q);
-    if(subsampleChecks>0) { if(dist<stepsize/subsampleChecks) return true; }
-    else { if(dist<stepsize) return true; }
+    int nearestID = rrt_B.ann.getNN(q);
+    arr nearestNode = rrt_B.ann.X[nearestID];
+    
+    bool isConnected = true;
+    // Check the distance for each robot's joints
+    for (const auto& [robot, jointMask] : robots) {
+
+      arr np;
+      arr rp;
+      for (uint i=0; i<jointMask.N; i++) {
+        if (jointMask(i) == 1){
+          rp.append(q(i));
+          np.append(nearestNode(i));
+        }
+
+      }
+      arr diff = rp - np;
+      double dist = length(diff);
+      if(subsampleChecks>0) { if(dist>stepsize/subsampleChecks) isConnected = false; }
+      else { if(dist>stepsize) isConnected = false; }
+    }
+    if (isConnected){return true;}
+
   }
 
   return false;
@@ -222,6 +311,7 @@ MR_RRT_PathFinder::MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& _start
   qT = _goals;
   auto q0ret = P.query(q0);
   auto qTret = P.query(qT);
+  P.C.setJointState(q0);
   if(!q0ret->isFeasible) { LOG(0) <<"initializing with infeasible q0:"; q0ret->writeDetails(std::cout, P); }
   if(!qTret->isFeasible) { LOG(0) <<"initializing with infeasible qT:"; qTret->writeDetails(std::cout, P); }
   rrt0 = make_shared<MR_RRT_SingleTree>(q0, q0ret);
@@ -286,8 +376,8 @@ int MR_RRT_PathFinder::stepConnect() {
   iters++;
   if(iters>(uint)maxIters) return -1;
 
-  bool success = growTreeToTree(*rrt0, *rrtT);
-  //if(!success) success = growTreeToTree(*rrtT, *rrt0);
+  bool success = growTreeToTree(*rrt0, *rrtT, true);
+  //if(!success) success = growTreeToTree(*rrtT, *rrt0, false);
 
   //animation display
   if(verbose>2) {

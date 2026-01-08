@@ -63,7 +63,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(const arr& x) {
   }
 
   C.setJointState(x);
-  C.view(true, "after setJointState");
+  
   if(computeAllCollisions) {
     //C.stepSwift();
     C.stepFcl();
@@ -310,7 +310,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(const arr& x, const std::map
 
 // ---------------------------------------------------------------------------
 
-shared_ptr<QueryResult> ConfigurationProblem::query(const arr& x, const std::map<rai::String, arr>& robots, const arr& qT) {
+shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<rai::String, arr>& robots, const arr& qT, const double stepSize, const int subsampleChecks, bool isForwardStep) {
   if(limits.N) {
     for(uint i=0; i<x.N; i++) {
       if(limits(1, i)>limits(0, i) && (x.elem(i)<limits(0, i) || x.elem(i)>limits(1, i))) {
@@ -319,30 +319,67 @@ shared_ptr<QueryResult> ConfigurationProblem::query(const arr& x, const std::map
     }
   }
 
-
-  // For each robot check if their joint state matches the target at the end
-  for (const auto& [robot, jointMask] : robots) {
-
-    arr js;
-    arr rx;
-    for (uint i=0; i<jointMask.N; i++) {
-      if (jointMask(i) == 1){
-        js.append(qT(i));
-        rx.append(x(i));
-      }
-      arr delta = js - rx;
-      double dist = length(delta);
-      if(dist>0.1) {
-        cout << "Robot: " << robot << " distance to target: " << dist << endl;
-      } else {
-        cout << "Robot: " << robot << " is at target." << endl;
-      }
-      // Check the distance between current and target joint states
-    }
-  }
+  cout << "Query with stepSize: " << stepSize << ", subsampleChecks: " << subsampleChecks << ", isForwardStep: " << isForwardStep <<  endl;
   
-  C.setJointState(x);
+    arr curState = C.getJointState();
+    cout << "Set joint states: " << x <<  endl;
+    cout << "Target joint states: " << qT <<  endl;
+    
+
+    //C.view(true, "before setJointState");
+
+    arr nx;
+    // For each robot check if their joint state matches the target at the end
+    for (const auto& [robot, jointMask] : robots) {
+
+      arr js;
+      arr rx;
+      arr cx;
+      for (uint i=0; i<jointMask.N; i++) {
+        if (jointMask(i) == 1){
+          js.append(qT(i));
+          rx.append(x(i));
+          cx.append(curState(i));
+        }
+      }
+
+      cout << "JS: " << js << ", RX: " << rx << ", CX: " << cx <<  endl;
+
+      arr delta = js - rx;
+      arr curDelta = js - cx;
+      
+      double curDist = length(curDelta);
+      double dist = length(delta);
+      
+      arr t_j;
+      cout << "Robot: " << robot << " Current vs Target: " << curDist << ", Set vs Target: " << dist << " Limit " << stepSize << endl;
+      
+      double threshold =  subsampleChecks > 0 ? (stepSize / subsampleChecks): stepSize;
+      if (curDist < threshold) {nx.append(cx); t_j = cx;}
+      else {nx.append(rx); t_j = rx;}     
+   
+      cout << "Current State for robot: " << robot << " " << C.getFrame(robot)->getJointState() << " Set State for Robot" << t_j <<  endl;
+      cout << "-------------------------" <<  endl;
+      C.getFrame(robot)->setJointState(t_j);
+      int idx = 0;
+      for (uint i=0; i<jointMask.N; i++) {
+        if (jointMask(i) == 1){
+          x(i) = t_j(idx);
+          idx++;
+        }
+      }
+
+
+    }
+ 
+    cout << "New joint states: " << x <<  endl;
+
+  
+  //C.view(true, "before setJointState");
+  //C.setJointState(x);
+  //C.view(true, "after setJointState");
   //C.view(true, STRING("Set Pos: " <<x << " Other robot pos: " << lastValue[depth]).p);
+
 
   if(computeAllCollisions) {
     //C.stepSwift();

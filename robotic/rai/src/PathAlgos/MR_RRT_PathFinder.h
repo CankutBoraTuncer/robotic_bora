@@ -35,6 +35,7 @@ struct MR_RRT_SingleTree {
   arr getProposalTowards(const arr& target, double stepsize);
 
   arr getNewSample(const arr& target, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth);
+  arr getNewSample(const arr& target, const std::map<rai::String, arr>& robots, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth);
 
   //trivial
   uint add(const arr& q, uint parentID, const shared_ptr<QueryResult>& _qr);
@@ -85,7 +86,7 @@ struct MR_RRT_PathFinder {
   arr planConnect(); //default numbers: equivalent to standard bidirect
 
   bool growTreeTowardsRandom(MR_RRT_SingleTree& rrt);
-  bool growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTree& rrt_B);
+  bool growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTree& rrt_B, bool forward=true);
 
   arr run(double timeBudget=1.); //obsolete
 
