@@ -1326,7 +1326,13 @@ class MR_PathFinder:
     """
     def __init__(self) -> None:
         ...
-    def setProblem(self, Configuration: Config, starts: arr, goals: arr, robots: dict, collisionTolerance: float = 0.0001) -> None:
+    def get_resampledPath(self, arg0: int) -> arr:
+        ...
+    def setExplicitCollisionPairs(self, collisionPairs: StringA) -> None:
+        """
+        only after setProblem
+        """
+    def setProblem(self, Configuration: Config, starts: arr, goals: arr, robots: arr, collisionTolerance: float = 0.0001, isIndependent: bool = False) -> None:
         ...
     def solve(self) -> SolverReturn:
         ...
