@@ -59,6 +59,8 @@ struct MR_RRT_PathFinder {
   ConfigurationProblem& P;
   shared_ptr<MR_RRT_SingleTree> rrt0;
   shared_ptr<MR_RRT_SingleTree> rrtT;
+  std::map<rai::String, shared_ptr<MR_RRT_SingleTree>> rrtRobots0;
+  std::map<rai::String, shared_ptr<MR_RRT_SingleTree>> rrtRobotsT;
 
   //parameters
   double stepsize;
@@ -87,6 +89,7 @@ struct MR_RRT_PathFinder {
 
   bool growTreeTowardsRandom(MR_RRT_SingleTree& rrt);
   bool growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTree& rrt_B, bool forward=true);
+  bool growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTree& rrt_B, std::map<rai::String, shared_ptr<MR_RRT_SingleTree>>& rrtRobots_A, std::map<rai::String, shared_ptr<MR_RRT_SingleTree>>& rrtRobots_B, bool forward=true);
 
   arr run(double timeBudget=1.); //obsolete
 

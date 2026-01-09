@@ -26,6 +26,9 @@ struct QueryResult {
   arr normal_y, normal_J;
   arr side_J;
 
+  std::map<rai::String, arr> coll_y_robots;
+  std::map<rai::String, arr> coll_J_robots;
+
   double totalCollision=0.;
   bool isGoal=true;
   bool isFeasible=true;
@@ -67,6 +70,7 @@ struct ConfigurationProblem {
 
   shared_ptr<GroundedObjective> addObjective(const FeatureSymbol& feat, const StringA& frames, ObjectiveType type, const arr& scale=NoArr, const arr& target=NoArr);
   shared_ptr<QueryResult> query(const arr& x);
+  shared_ptr<QueryResult> query(const arr& x, const rai::String& robot);
   shared_ptr<QueryResult> query(const arr& x, const std::map<rai::String, arr>& frame, uint depth);
   shared_ptr<QueryResult> query(arr& x, const std::map<rai::String, arr>& robots, const arr& qT, const double stepSize, const int subsampleChecks, bool isForwardStep);
 };
