@@ -71,6 +71,7 @@ struct MR_RRT_PathFinder {
   double p_sideStep=.0;
   double p_backwardStep=.0;
   std::map<rai::String, arr> robots;
+  std::map<rai::String, bool> isFinished;
   arr q0, qT;
 
   //counters
@@ -80,7 +81,7 @@ struct MR_RRT_PathFinder {
   //output
   arr path;
 
-  MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& starts, const arr& goals, double _stepsize = -1., int _subsampleChecks=-1, int maxIters=-1, int _verbose=-1);
+  MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& starts, const arr& goals, const std::map<rai::String, arr>& robots, double _stepsize = -1., int _subsampleChecks=-1, int maxIters=-1, int _verbose=-1);
   ~MR_RRT_PathFinder() {}
 
   int stepConnect();

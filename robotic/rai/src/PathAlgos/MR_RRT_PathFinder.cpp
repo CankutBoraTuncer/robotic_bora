@@ -17,7 +17,21 @@
 #  include <GL/gl.h>
 #endif
 
+#include <cstring> // std::strcmp
+
 //===========================================================================
+
+namespace {
+template<class Map>
+typename Map::iterator findLex(Map& m, const rai::String& key) {
+  const char* kp = (const char*)key; if(!kp) kp = "";
+  for(auto it = m.begin(); it != m.end(); ++it) {
+    const char* ip = (const char*)it->first; if(!ip) ip = "";
+    if(std::strcmp(ip, kp) == 0) return it;
+  }
+  return m.end();
+}
+}
 
 MR_RRT_SingleTree::MR_RRT_SingleTree(const arr& q0, const shared_ptr<QueryResult>& q0_qr) {
 //  if(!q0_qr->isFeasible) LOG(0) <<"rooting RRT with infeasible start configuration -- that's likely to fail: query is:\n" <<*q0_qr;
@@ -194,7 +208,7 @@ arr MR_RRT_SingleTree::getPathFromNode(uint fromID) {
 bool MR_RRT_PathFinder::growTreeTowardsRandom(MR_RRT_SingleTree& rrt) {
   const arr start = rrt.ann.X[0];
   arr t(rrt.getNode(0).N);
-  rndUniform(t, -RAI_2PI, RAI_2PI, false);
+  rndUniform(t, -RAI_2PI, false);
   HALT("DON'T USE 2PI")
 
   arr q = rrt.getProposalTowards(t, stepsize);
@@ -324,7 +338,6 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   
   arr qG;
   double prob = forward ? 0.5 : 0.5;
-
   arr t;
 
   if(rnd.uni()<prob) {
@@ -389,50 +402,53 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
   P.collisionTolerance = org_collisionTolerance;
 
-  cout << "INNN" << endl;
   //finally adding the new node to the tree
   if(qr->isFeasible){
     rrt_A.add(q, parentID, qr);
-    bool isConnected = false;
+    bool isConnected = true;
 
     for (const auto& [robot, robotMask] : robots) {
       arr q_robot;
       arr q_t;
-      for (uint i = 0; i < robotMask.N; ++i) {
+      for (uint i = 0; i < robotMask.N; i++) {
         if (robotMask(i) == 1) {
           q_robot.append(q(i));
           q_t.append(t(i));
         }
-      }
-      cout << "STEP 0" << endl;  
-      MR_RRT_SingleTree r_A = rrtRobots_A[robot];
-      shared_ptr<MR_RRT_SingleTree> r_B = rrtRobots_B[robot];
-      int parentIDr = r_Aann.getNN(q_robot);
-      cout << "STEP 0.5" << endl;
+      } 
+
+      auto itA = rrtRobots_A.find(robot);
+      if(itA == rrtRobots_A.end()) itA = findLex(rrtRobots_A, robot);
+
+      auto itB = rrtRobots_B.find(robot);
+      if(itB == rrtRobots_B.end()) itB = findLex(rrtRobots_B, robot);
+
+      CHECK(itA != rrtRobots_A.end() && itA->second, "Missing rrtRobots_A entry for robot '" << robot << "'");
+      CHECK(itB != rrtRobots_B.end() && itB->second, "Missing rrtRobots_B entry for robot '" << robot << "'");
+
+      shared_ptr<MR_RRT_SingleTree> r_A = itA->second;
+      shared_ptr<MR_RRT_SingleTree> r_B = itB->second;
+
+      int parentIDr = r_A->ann.getNN(q_robot);
+
+      auto qr_1 = P.query(q_robot, robot);
       r_A->add(q_robot, parentIDr, qr);
-      cout << "STEP 1" << endl;
+
       int nearestIDr = r_B->ann.getNN(q_robot);
       arr nearestNode = r_B->ann.X[nearestIDr];
-      cout << "STEP 2" << endl;
-      arr np;
-      arr rp;
-      for (uint i=0; i<robotMask.N; i++) {
-        if (robotMask(i) == 1){
-          rp.append(q(i));
-          np.append(nearestNode(i));
-        }
-      }
 
-      arr diff = rp - np;
-      double dist = length(diff);
-      cout << "STEP 3" << endl;
-      cout << "Robot: " << robot << " Distance to nearest node: " << dist << " " <<  stepsize << " " << subsampleChecks << endl;
-      if(subsampleChecks>0) { if(dist<stepsize/subsampleChecks) {isConnected = false; return true;} }
-      else { if(dist<stepsize) {isConnected = false; return true;}}
+      // nearestNode and q_robot are in the SAME (robot) space
+      CHECK_EQ(nearestNode.N, q_robot.N, "robot-space dim mismatch for '" << robot << "'");
+      double dist = length(q_robot - nearestNode);
+
+      cout << "Robot: " << robot << " Distance to nearest node: " << dist << " " << stepsize << " " << subsampleChecks << endl;
+
+      if(subsampleChecks>0) { if(dist > stepsize/subsampleChecks) { isConnected = false;} }
+      else { if(dist > stepsize) { isConnected = false;  } }
 
     }
-    cout << "OUTTT" << endl;
-    //if (isConnected){return true;}
+
+    if (isConnected){return true;}
 
   }
 
@@ -441,12 +457,13 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
 //===========================================================================
 
-MR_RRT_PathFinder::MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& _starts, const arr& _goals, double _stepsize, int _subsampleChecks, int _maxIters, int _verbose)
+MR_RRT_PathFinder::MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& _starts, const arr& _goals, const std::map<rai::String, arr>& _robots, const  double _stepsize, int _subsampleChecks, int _maxIters, int _verbose)
   : P(_P),
     stepsize(_stepsize),
     maxIters(_maxIters),
     verbose(_verbose),
-    subsampleChecks(_subsampleChecks) {
+    subsampleChecks(_subsampleChecks),
+    robots(_robots) {
 
   if(stepsize<0.) stepsize = rai::getParameter<double>("rrt/stepsize", .1);
   if(subsampleChecks<0) subsampleChecks = rai::getParameter<int>("rrt/subsamples", 4);
@@ -476,9 +493,12 @@ MR_RRT_PathFinder::MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& _start
 
     if(!q0ret_robot->isFeasible) { LOG(0) <<"initializing with infeasible q0:"; q0ret_robot->writeDetails(std::cout, P); }
     if(!qTret_robot->isFeasible) { LOG(0) <<"initializing with infeasible qT:"; qTret_robot->writeDetails(std::cout, P); }
-
+    
+    cout << "Initializing RRT for robot: " << robot << endl;
     rrtRobots0[robot] = make_shared<MR_RRT_SingleTree>(q0_robot, q0ret_robot);
     rrtRobotsT[robot] = make_shared<MR_RRT_SingleTree>(qT_robot, qTret_robot);
+
+    isFinished[robot] = false;
   }
 
   P.C.setJointState(q0);
@@ -619,8 +639,7 @@ void MR_PathFinder::setProblem(const Configuration& C, const arr& starts, const 
   if(collisionTolerance<0.) collisionTolerance = rai::getParameter<double>("rrt/collisionTolerance", 1e-4);
   problem = make_shared<ConfigurationProblem>(C, true, collisionTolerance, 1);
   problem->verbose=0;
-  rrtSolver = make_shared<MR_RRT_PathFinder>(*problem, starts, goals);
-  rrtSolver->robots = robots;
+  rrtSolver = make_shared<MR_RRT_PathFinder>(*problem, starts, goals, robots);
 
 
   cout <<"RRT PathFinder: stepsize=" <<rrtSolver->stepsize
