@@ -121,7 +121,7 @@ arr MR_RRT_SingleTree::getNewSample(const arr& target, double stepsize, double p
 // -----------------------------------------------------------------
 
 
-arr MR_RRT_SingleTree::getNewSample(const arr& target, const std::map<rai::String, arr>& robots, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth) {
+arr MR_RRT_SingleTree::getNewSample(const arr& target, const std::map<int, arr>& robots, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth) {
   //find NN
   nearestID = ann.getNN(target);
   std::shared_ptr<QueryResult> qr = queries(nearestID);
@@ -274,7 +274,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   if(pr->totalCollision>P.collisionTolerance) P.collisionTolerance = pr->totalCollision + 1e-6;
 
   //evaluate the sample
-  auto qr = P.query(q, robots, qG, stepsize, subsampleChecks, isForwardStep);
+  auto qr = P.query(q, robots, isFinished);
 
   if(isForwardStep) {  n_forwardStep++; if(qr->isFeasible) n_forwardStepGood++; }
   if(!isForwardStep) {  n_rndStep++; if(qr->isFeasible) n_rndStepGood++; }
@@ -285,7 +285,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   if(!qr->isFeasible && p_backwardStep>0. && rnd.uni()<p_backwardStep) {
     t = q + qr->getBackwardStep();
     q = rrt_A.getNewSample(t, robots,stepsize, p_sideStep, isSideStep, 0);
-    qr = P.query(q, robots, qG, stepsize, subsampleChecks, isForwardStep);
+    qr = P.query(q, robots, isFinished);
     n_backStep++; if(qr->isFeasible) n_backStepGood++;
     if(isSideStep) {  n_sideStep++; if(qr->isFeasible) n_sideStepGood++; }
   };
@@ -333,7 +333,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 //===========================================================================
 //===========================================================================
 
-bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTree& rrt_B, std::map<rai::String, shared_ptr<MR_RRT_SingleTree>>& rrtRobots_A, std::map<rai::String, shared_ptr<MR_RRT_SingleTree>>& rrtRobots_B, bool forward) {
+bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTree& rrt_B, std::map<int, shared_ptr<MR_RRT_SingleTree>>& rrtRobots_A, std::map<int, shared_ptr<MR_RRT_SingleTree>>& rrtRobots_B, bool forward) {
   bool isSideStep, isForwardStep;
   
   arr qG;
@@ -378,7 +378,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   if(pr->totalCollision>P.collisionTolerance) P.collisionTolerance = pr->totalCollision + 1e-6;
 
   //evaluate the sample
-  auto qr = P.query(q, robots, qG, stepsize, subsampleChecks, isForwardStep);
+  auto qr = P.query(q, robots, isFinished);
 
   if(isForwardStep) {  n_forwardStep++; if(qr->isFeasible) n_forwardStepGood++; }
   if(!isForwardStep) {  n_rndStep++; if(qr->isFeasible) n_rndStepGood++; }
@@ -389,7 +389,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   if(!qr->isFeasible && p_backwardStep>0. && rnd.uni()<p_backwardStep) {
     t = q + qr->getBackwardStep();
     q = rrt_A.getNewSample(t, robots,stepsize, p_sideStep, isSideStep, 0);
-    qr = P.query(q, robots, qG, stepsize, subsampleChecks, isForwardStep);
+    qr = P.query(q, robots, isFinished);
     n_backStep++; if(qr->isFeasible) n_backStepGood++;
     if(isSideStep) {  n_sideStep++; if(qr->isFeasible) n_sideStepGood++; }
   };
@@ -408,6 +408,9 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
     bool isConnected = true;
 
     for (const auto& [robot, robotMask] : robots) {
+
+      if (isFinished[robot]) continue;
+
       arr q_robot;
       arr q_t;
       for (uint i = 0; i < robotMask.N; i++) {
@@ -418,14 +421,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
       } 
 
       auto itA = rrtRobots_A.find(robot);
-      if(itA == rrtRobots_A.end()) itA = findLex(rrtRobots_A, robot);
-
       auto itB = rrtRobots_B.find(robot);
-      if(itB == rrtRobots_B.end()) itB = findLex(rrtRobots_B, robot);
-
-      CHECK(itA != rrtRobots_A.end() && itA->second, "Missing rrtRobots_A entry for robot '" << robot << "'");
-      CHECK(itB != rrtRobots_B.end() && itB->second, "Missing rrtRobots_B entry for robot '" << robot << "'");
-
       shared_ptr<MR_RRT_SingleTree> r_A = itA->second;
       shared_ptr<MR_RRT_SingleTree> r_B = itB->second;
 
@@ -443,8 +439,8 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
       cout << "Robot: " << robot << " Distance to nearest node: " << dist << " " << stepsize << " " << subsampleChecks << endl;
 
-      if(subsampleChecks>0) { if(dist > stepsize/subsampleChecks) { isConnected = false;} }
-      else { if(dist > stepsize) { isConnected = false;  } }
+      if(subsampleChecks>0) { if(dist > stepsize/subsampleChecks) { isConnected = false;} else {isFinished[robot] = true;} }
+      else { if(dist > stepsize) { isConnected = false;  } else {isFinished[robot] = true;}}
 
     }
 
@@ -457,7 +453,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
 //===========================================================================
 
-MR_RRT_PathFinder::MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& _starts, const arr& _goals, const std::map<rai::String, arr>& _robots, const  double _stepsize, int _subsampleChecks, int _maxIters, int _verbose)
+MR_RRT_PathFinder::MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& _starts, const arr& _goals, const std::map<int, arr>& _robots, const  double _stepsize, int _subsampleChecks, int _maxIters, int _verbose)
   : P(_P),
     stepsize(_stepsize),
     maxIters(_maxIters),
@@ -594,11 +590,64 @@ int MR_RRT_PathFinder::stepConnect() {
 //      std::cout <<std::endl;
     }
 
-    path = rrt0->getPathFromNode(rrt0->nearestID);
-    arr pathT = rrtT->getPathFromNode(rrtT->nearestID);
+    cout << "Constructing final path..." << endl;
+    // Get all robots paths and combine
+    int maxPathLength = 0;
+    std::map<int, arr> paths;
+    for (const auto& [robot, rrt_robot] : rrtRobots0) {
+      arr p = rrt_robot->getPathFromNode(rrt_robot->nearestID);
+      arr pT = rrtRobotsT[robot]->getPathFromNode(rrtRobotsT[robot]->nearestID);
+      revertPath(p);
+      p.append(pT);
+      paths[robot] = p;
+      if (p.d0 > maxPathLength) {
+        maxPathLength = p.d0;
+      }
+    }
 
-    revertPath(path);
-    path.append(pathT);
+    cout << "Max path length across robots: " << maxPathLength << endl;
+
+    for (uint j = 0; j < (uint)maxPathLength; ++j){
+      arr qj;
+      qj.resize(q0.N);
+      qj.setZero();
+
+      // fill global joint vector from each robot's robot-space path
+      for (const auto& [robot_id, jointMask] : robots) {
+        auto itP = paths.find(robot_id);
+        CHECK(itP != paths.end(), "Missing path for robot_id " << robot_id);
+
+        const arr& pr = itP->second;              // shape: Tr x dim_robot
+        uint Tr = pr.d0;
+        uint dim_robot = pr.d1;
+
+        uint row = (j < Tr ? j : Tr - 1);         // repeat last if shorter
+
+        // local column counter in robot-space
+        uint k = 0;
+        for (uint i = 0; i < jointMask.N; ++i) {
+          if (jointMask(i) == 1) {
+            CHECK(k < dim_robot, "robot-space dim mismatch for robot_id " << robot_id);
+            qj(i) = pr(row, k);
+            ++k;
+          }
+        }
+        CHECK(k == dim_robot, "robot-space path dim doesn't match jointMask for robot_id " << robot_id);
+      }
+
+      path.append(qj);
+    }
+
+    path.reshape(-1, q0.N);
+
+    //shared_ptr<MR_RRT_SingleTree> rrtA = rrtRobots0[rrtRobots0.begin()->first];
+    //shared_ptr<MR_RRT_SingleTree> rrtB = rrtRobotsT[rrtRobotsT.begin()->first];
+    //path = rrt0->getPathFromNode(rrt0->nearestID);
+    //arr pathT = rrtT->getPathFromNode(rrtT->nearestID);
+
+    //revertPath(path);
+    //path.append(pathT);
+    cout << "Path constructed with length: " << path.d0 << endl;
 
     //display
     if(verbose>1) {
@@ -635,7 +684,7 @@ arr MR_RRT_PathFinder::run(double timeBudget) {
 
 namespace rai {
 
-void MR_PathFinder::setProblem(const Configuration& C, const arr& starts, const arr& goals, const std::map<rai::String, arr>& robots, double collisionTolerance, bool isIndependent) {
+void MR_PathFinder::setProblem(const Configuration& C, const arr& starts, const arr& goals, const std::map<int, arr>& robots, double collisionTolerance, bool isIndependent) {
   if(collisionTolerance<0.) collisionTolerance = rai::getParameter<double>("rrt/collisionTolerance", 1e-4);
   problem = make_shared<ConfigurationProblem>(C, true, collisionTolerance, 1);
   problem->verbose=0;

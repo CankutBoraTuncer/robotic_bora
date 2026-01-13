@@ -35,7 +35,7 @@ struct MR_RRT_SingleTree {
   arr getProposalTowards(const arr& target, double stepsize);
 
   arr getNewSample(const arr& target, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth);
-  arr getNewSample(const arr& target, const std::map<rai::String, arr>& robots, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth);
+  arr getNewSample(const arr& target, const std::map<int, arr>& robots, double stepsize, double p_sideStep, bool& isSideStep, const uint recursionDepth);
 
   //trivial
   uint add(const arr& q, uint parentID, const shared_ptr<QueryResult>& _qr);
@@ -59,8 +59,8 @@ struct MR_RRT_PathFinder {
   ConfigurationProblem& P;
   shared_ptr<MR_RRT_SingleTree> rrt0;
   shared_ptr<MR_RRT_SingleTree> rrtT;
-  std::map<rai::String, shared_ptr<MR_RRT_SingleTree>> rrtRobots0;
-  std::map<rai::String, shared_ptr<MR_RRT_SingleTree>> rrtRobotsT;
+  std::map<int, shared_ptr<MR_RRT_SingleTree>> rrtRobots0;
+  std::map<int, shared_ptr<MR_RRT_SingleTree>> rrtRobotsT;
 
   //parameters
   double stepsize;
@@ -70,8 +70,8 @@ struct MR_RRT_PathFinder {
   double p_forwardStep=.5;
   double p_sideStep=.0;
   double p_backwardStep=.0;
-  std::map<rai::String, arr> robots;
-  std::map<rai::String, bool> isFinished;
+  std::map<int, arr> robots;
+  std::map<int, bool> isFinished;
   arr q0, qT;
 
   //counters
@@ -81,7 +81,7 @@ struct MR_RRT_PathFinder {
   //output
   arr path;
 
-  MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& starts, const arr& goals, const std::map<rai::String, arr>& robots, double _stepsize = -1., int _subsampleChecks=-1, int maxIters=-1, int _verbose=-1);
+  MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& starts, const arr& goals, const std::map<int, arr>& robots, double _stepsize = -1., int _subsampleChecks=-1, int maxIters=-1, int _verbose=-1);
   ~MR_RRT_PathFinder() {}
 
   int stepConnect();
@@ -90,7 +90,7 @@ struct MR_RRT_PathFinder {
 
   bool growTreeTowardsRandom(MR_RRT_SingleTree& rrt);
   bool growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTree& rrt_B, bool forward=true);
-  bool growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTree& rrt_B, std::map<rai::String, shared_ptr<MR_RRT_SingleTree>>& rrtRobots_A, std::map<rai::String, shared_ptr<MR_RRT_SingleTree>>& rrtRobots_B, bool forward=true);
+  bool growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTree& rrt_B, std::map<int, shared_ptr<MR_RRT_SingleTree>>& rrtRobots_A, std::map<int, shared_ptr<MR_RRT_SingleTree>>& rrtRobots_B, bool forward=true);
 
   arr run(double timeBudget=1.); //obsolete
 
@@ -107,7 +107,7 @@ struct MR_PathFinder : NonCopyable {
   std::shared_ptr<MR_RRT_PathFinder> rrtSolver;
   std::shared_ptr<SolverReturn> ret;
 
-  void setProblem(const rai::Configuration& C, const arr& starts, const arr& goals, const std::map<rai::String, arr>& robots, double collisionTolerance=-1., bool isIndependent=false);
+  void setProblem(const rai::Configuration& C, const arr& starts, const arr& goals, const std::map<int, arr>& robots, double collisionTolerance=-1., bool isIndependent=false);
 
   void setExplicitCollisionPairs(const StringA& collisionPairs);
 
