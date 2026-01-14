@@ -44,6 +44,9 @@ struct MR_RRT_SingleTree {
   uint getParent(uint i) { return parent(i); }
   uint getNumberNodes() { return ann.X.d0; }
   uint getDim() { return ann.X.d1; }
+  arr getNodeByDepth(uint depth);
+  uint getDepthByNode(uint i) { return queries(i)->depth; }
+  uint getLastDepth() { return queries(ann.X.d0-1)->depth; }
   arr getNode(uint i) { return ann.X[i].copy(); }
   arr getLast() { return ann.X[ann.X.d0-1].copy(); }
   arr getRandomNode() { return ann.X[rnd(ann.X.d0)].copy(); }
@@ -61,6 +64,7 @@ struct MR_RRT_PathFinder {
   shared_ptr<MR_RRT_SingleTree> rrtT;
   std::map<int, shared_ptr<MR_RRT_SingleTree>> rrtRobots0;
   std::map<int, shared_ptr<MR_RRT_SingleTree>> rrtRobotsT;
+  std::map<int, shared_ptr<MR_RRT_SingleTree>> rrtPaths;
 
   //parameters
   double stepsize;

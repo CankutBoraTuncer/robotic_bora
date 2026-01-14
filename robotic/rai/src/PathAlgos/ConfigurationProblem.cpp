@@ -649,8 +649,10 @@ shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<int, 
     // For each robot check if their joint state matches the target at the end
     for (const auto& [robot, jointMask] : robots) {
 
-      auto it = isFinished.find(robot);
-      if (it != isFinished.end() && it->second) continue;
+      if(isFinished.at(robot)) {
+        cout << "Robot: " << robot << " is finished, keeping current joint state." << endl;
+        continue;
+      }
       arr rx;
       for (uint i=0; i<jointMask.N; i++) {
         if (jointMask(i) == 1){
@@ -664,7 +666,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<int, 
     x = js;
 
     
- 
+
     cout << "New joint states: " << x <<  endl;
 
   if(computeAllCollisions) {
