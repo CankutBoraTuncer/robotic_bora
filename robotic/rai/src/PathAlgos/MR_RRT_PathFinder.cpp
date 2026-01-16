@@ -516,6 +516,10 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
       CHECK_EQ(nearestNode.N, q_robot.N, "robot-space dim mismatch for '" << robot << "'");
       double dist = length(q_robot - nearestNode);
 
+      //auto q_test = P.query(nearestNode, robot);
+      //if (!q_test->isFeasible) {isConnected = false; continue;}
+      //P.C.view(true, ("Robot: " + std::to_string(robot) + " Distance to nearest node: " + std::to_string(dist)).c_str());
+
       cout << "Robot: " << robot << " Distance to nearest node: " << dist << " " << stepsize << " " << subsampleChecks << endl;
       //P.C.view(true, ("Robot: " + std::to_string(robot) + " Distance to nearest node: " + std::to_string(dist)).c_str());
       if(subsampleChecks>0) { if(dist > stepsize/subsampleChecks) { isConnected = false;} 
@@ -554,8 +558,15 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
       P.C.view(true, ("Robot: " + std::to_string(robot) + " is connected!").c_str());
       cout << "Robot: " << robot << " is connected!" << endl;
        // Store the path for this robot as a tree  
-       arr path_r = r_A->getPathFromNode(r_A->nearestID);
-       arr path_t = r_B->getPathFromNode(r_B->nearestID);
+      arr path_r;
+      arr path_t;
+      if (forward) {
+        path_r = r_A->getPathFromNode(r_A->nearestID);
+        path_t = r_B->getPathFromNode(r_B->nearestID);
+      } else {
+        path_r = r_B->getPathFromNode(r_B->nearestID);
+        path_t = r_A->getPathFromNode(r_A->nearestID);
+      }
        revertPath(path_r);
        path_r.append(path_t);
        rrtPaths[robot] = path_r;
@@ -756,7 +767,7 @@ int MR_RRT_PathFinder::stepConnect() {
     
 
     path.reshape(-1, q0.N);
-    revertPath(path);
+    //revertPath(path);
     
     //path = rrt0->getPathFromNode(rrt0->nearestID);
     //cout << "ADSKJHASDKJHJKASD" << endl;
