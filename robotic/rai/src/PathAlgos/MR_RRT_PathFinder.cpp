@@ -382,22 +382,6 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
   arr js = rrt_A.getNode(rrt_A.ann.getNN(t));
 
-  /*
-  for (const auto& [robot, rrt0] : rrtRobots_A){
-    if (!isFinished[robot]) continue;
-    arr jointMask = robots[robot];
-    arr tr;
-    for (uint i = 0; i < jointMask.N; i++) {
-      if (jointMask(i) == 1) {
-        js(i) = qT(i);
-      }
-    }
-  } 
-  P.C.setJointState(js);  
-  */
-
-  //P.C.view(true, ("RRT_GrowTreeToTree: " + std::to_string(depth)).c_str());
-
   //sample configuration towards target, possibly sideStepping
   arr q = rrt_A.getNewSample(t, robots, stepsize, p_sideStep, isSideStep, 0);
   
@@ -405,14 +389,14 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
     for (const auto& [robot, path_r] : rrtPaths){
       if (!isFinished[robot]) continue;
       cout << "Getting goal for robot: " << robot << endl;
-      uint depth = rrt_A.getDepthByNode(rrt_A.nearestID);
+      uint depth = rrt_A.getDepthByNode(rrt_A.nearestID) + 1;
       if (depth >= path_r.d0) depth = path_r.d0 - 1;
       arr rq = path_r[depth];
       arr jointMask = robots[robot];
       uint k = 0;
       for (uint i = 0; i < jointMask.N; i++) {
         if (jointMask(i) == 1) {
-          js(i) = rq(k);
+          q(i) = rq(k);
           k++;
         }
       }
@@ -428,7 +412,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
       uint k = 0;
       for (uint i = 0; i < jointMask.N; i++) {
         if (jointMask(i) == 1) {
-          js(i) = rq(k);
+          q(i) = rq(k);
           k++;
         }
 
@@ -436,7 +420,6 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
       cout << "Robot goal joints: " << rq << endl;
     }
   }
-  
   
   P.C.setJointState(js);
 
@@ -448,7 +431,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   if(pr->totalCollision>P.collisionTolerance) P.collisionTolerance = pr->totalCollision + 1e-6;
 
   //evaluate the sample
-  auto qr = P.query(q, robots, isFinished);
+  auto qr = P.query(q);
 
   if(isForwardStep) {  n_forwardStep++; if(qr->isFeasible) n_forwardStepGood++; }
   if(!isForwardStep) {  n_rndStep++; if(qr->isFeasible) n_rndStepGood++; }
@@ -459,7 +442,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   if(!qr->isFeasible && p_backwardStep>0. && rnd.uni()<p_backwardStep) {
     t = q + qr->getBackwardStep();
     q = rrt_A.getNewSample(t, robots,stepsize, p_sideStep, isSideStep, 0);
-    qr = P.query(q, robots, isFinished);
+    qr = P.query(q);
     n_backStep++; if(qr->isFeasible) n_backStepGood++;
     if(isSideStep) {  n_sideStep++; if(qr->isFeasible) n_sideStepGood++; }
   };
@@ -501,61 +484,28 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
       int parentIDr = r_A->ann.getNN(q_robot);
       r_A->nearestID = parentID;
-      //if (!forward) P.C.view(true, ("Checking robot connections for robot: " + std::to_string(robot)).c_str());
       auto qr_1 = P.query(q_robot, robot);
       r_A->add(q_robot, parentID, qr_1);
 
-      //if(!forward) {isConnected = false; continue;};
-      
-      //P.C.view(true, "Checking robot connections");
       uint nearestIDr = r_B->ann.getNN(q_robot);
       r_B->nearestID = nearestIDr;
+      rrt_B.nearestID = nearestIDr;
       arr nearestNode = r_B->ann.X[r_B->ann.getNN(q_robot)];
 
       // nearestNode and q_robot are in the SAME (robot) space
       CHECK_EQ(nearestNode.N, q_robot.N, "robot-space dim mismatch for '" << robot << "'");
       double dist = length(q_robot - nearestNode);
 
-      //auto q_test = P.query(nearestNode, robot);
-      //if (!q_test->isFeasible) {isConnected = false; continue;}
-      //P.C.view(true, ("Robot: " + std::to_string(robot) + " Distance to nearest node: " + std::to_string(dist)).c_str());
-
       cout << "Robot: " << robot << " Distance to nearest node: " << dist << " " << stepsize << " " << subsampleChecks << endl;
-      //P.C.view(true, ("Robot: " + std::to_string(robot) + " Distance to nearest node: " + std::to_string(dist)).c_str());
+
       if(subsampleChecks>0) { if(dist > stepsize/subsampleChecks) { isConnected = false;} 
                               else {isFinished[robot] = true;} }
 
       else { if(dist > stepsize) {isConnected = false;} 
             else {isFinished[robot] = true; } }
 
-      /*
-      if (isFinished[robot]){
-        for (const auto& [robot2, robotMask2] : robots) {
-          if (robot != robot2) {
-            arr q_robot2;
-            for (uint i = 0; i < robotMask2.N; i++) {
-              if (robotMask2(i) == 1) {
-                q_robot2.append(q(i));
-              }
-            }
-
-            auto itB2 = rrtRobots_B.find(robot);
-            shared_ptr<MR_RRT_SingleTree> r_B = itB->second;
-            int nearestIDr2 = r_B->ann.getNN(q_robot2);
-            //r_B->nearestID = nearestIDr;
-            arr nearestNode2 = r_B->ann.X[nearestIDr2];
-            if (length(q_robot2 - nearestNode2) > stepsize) {
-              isFinished[robot] = false;
-              isConnected = false;
-              break;
-            }
-          }
-        }
-      }
-      */
       
      if(isFinished[robot]){
-      P.C.view(true, ("Robot: " + std::to_string(robot) + " is connected!").c_str());
       cout << "Robot: " << robot << " is connected!" << endl;
        // Store the path for this robot as a tree  
       arr path_r;
@@ -573,9 +523,14 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
       }
       cout << "isFinished status: " << isFinished[robot] << endl;
     }
-    
-    if (isConnected){cout << "CONNECTED!" << endl; return true; }
-
+    if (forward) {
+    int nearestID = rrt_B.ann.getNN(q);
+    arr nearestNode = qT;
+    arr diff = q - nearestNode;
+    double dist = length(diff);
+    if(subsampleChecks>0) { if(dist<stepsize/subsampleChecks) {return true;} }
+    else { if(dist<stepsize) {return true;}}
+    }
   }
 
   return false;
@@ -730,7 +685,8 @@ int MR_RRT_PathFinder::stepConnect() {
         maxPathLength = path_r.d0;
       }
     }
-      
+    
+    /**/
     cout << "Max path length across robots: " << maxPathLength << endl;
     
     for (uint j = 0; j < (uint)maxPathLength; ++j){
@@ -769,10 +725,10 @@ int MR_RRT_PathFinder::stepConnect() {
     path.reshape(-1, q0.N);
     //revertPath(path);
     
-    //path = rrt0->getPathFromNode(rrt0->nearestID);
+    path = rrt0->getPathFromNode(rrt0->nearestID);
     //cout << "ADSKJHASDKJHJKASD" << endl;
     //arr pathT = rrtT->getPathFromNode(rrtT->nearestID);
-    //revertPath(path);
+    revertPath(path);
     //path.append(pathT);
     cout << "Path constructed with length: " << path.d0 << endl;
 
