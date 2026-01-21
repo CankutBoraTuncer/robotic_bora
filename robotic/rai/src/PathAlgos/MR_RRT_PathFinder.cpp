@@ -171,12 +171,14 @@ arr MR_RRT_SingleTree::getNewSample(const arr& target, const std::map<int, arr>&
     }
   }
 
+  arr JS = (js + delta).copy();
+
   //without side stepping, we're done
   isSideStep = false;
   cout << "p_sideStep: " << p_sideStep << " recursionDepth: " << recursionDepth << endl;
-  if(p_sideStep<=0. || recursionDepth >= 3) return getNode(nearestID) + delta;
+  if(p_sideStep<=0. || recursionDepth >= 3) return JS;
 
-  arr JS = (js + delta).copy();
+  
   
   cout << "Checking side stepping for robots: " << qr->coll_y_robots.size() << endl;
   for (const auto& [robot_name, jointMask] : robots) {
@@ -382,45 +384,63 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
   arr js = rrt_A.getNode(rrt_A.ann.getNN(t));
 
-  //sample configuration towards target, possibly sideStepping
-  arr q = rrt_A.getNewSample(t, robots, stepsize, p_sideStep, isSideStep, 0);
+
   
   if (forward) {
-    for (const auto& [robot, path_r] : rrtPaths){
+    for (const auto& [robot, path_tree] : rrtPathTrees){
       if (!isFinished[robot]) continue;
       cout << "Getting goal for robot: " << robot << endl;
-      uint depth = rrt_A.getDepthByNode(rrt_A.nearestID) + 1;
-      if (depth >= path_r.d0) depth = path_r.d0 - 1;
-      arr rq = path_r[depth];
+      arr r_j;
       arr jointMask = robots[robot];
+
+      for (uint i = 0; i < jointMask.N; i++) {
+        if (jointMask(i) == 1) {
+          r_j.append(js(i));
+        }
+      }
+      uint depth = path_tree->ann.getNN(r_j) + 1;
+      if (depth >= path_tree->parent.N) depth = path_tree->parent.N - 1;
+      arr rq = path_tree->getNode(depth);
+      
       uint k = 0;
       for (uint i = 0; i < jointMask.N; i++) {
         if (jointMask(i) == 1) {
-          q(i) = rq(k);
+          t(i) = rq(k);
           k++;
         }
       }
       cout << "Robot goal joints: " << rq << endl;
     }
   } else {
-    for (const auto& [robot, path_r] : rrtPaths){
+    for (const auto& [robot, path_tree] : rrtPathTrees){
       if (!isFinished[robot]) continue;
-      cout << "Getting goal for robot:2 " << robot << endl;
-      arr rq = path_r[path_r.d0 - 1];
-      cout << "Last depth: " << path_r.d0 - 1 << endl;
+      cout << "Getting goal for robot: " << robot << endl;
+      arr r_j;
       arr jointMask = robots[robot];
+
+      for (uint i = 0; i < jointMask.N; i++) {
+        if (jointMask(i) == 1) {
+          r_j.append(js(i));
+        }
+      }
+      uint depth = path_tree->ann.getNN(r_j) - 1;
+      if (depth < 0) depth = 0;
+      arr rq = path_tree->getNode(depth);
+      
       uint k = 0;
       for (uint i = 0; i < jointMask.N; i++) {
         if (jointMask(i) == 1) {
-          q(i) = rq(k);
+          t(i) = rq(k);
           k++;
         }
-
       }
       cout << "Robot goal joints: " << rq << endl;
     }
   }
   
+  //sample configuration towards target, possibly sideStepping
+  arr q = rrt_A.getNewSample(t, robots, stepsize, p_sideStep, isSideStep, 0);
+
   P.C.setJointState(js);
 
   uint parentID = rrt_A.nearestID;
@@ -520,16 +540,25 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
        revertPath(path_r);
        path_r.append(path_t);
        rrtPaths[robot] = path_r;
+       //Generate a tree using this path
+       auto qr_path = P.query(path_r[0], robot);  
+        shared_ptr<MR_RRT_SingleTree> rrt_path = make_shared<MR_RRT_SingleTree>(path_r[0], qr_path);
+        uint nn =0;
+        for (uint i = 1; i < path_r.d0; i++) {
+          qr_path = P.query(path_r[i], robot);
+          rrt_path->add(path_r[i], nn, qr_path);
+          nn +=1;
+        }
+        rrtPathTrees[robot] = rrt_path;
       }
       cout << "isFinished status: " << isFinished[robot] << endl;
     }
     if (forward) {
-    int nearestID = rrt_B.ann.getNN(q);
-    arr nearestNode = qT;
-    arr diff = q - nearestNode;
-    double dist = length(diff);
-    if(subsampleChecks>0) { if(dist<stepsize/subsampleChecks) {return true;} }
-    else { if(dist<stepsize) {return true;}}
+      arr diff = q - qT;
+      double dist = length(diff);
+      
+      if(subsampleChecks>0) { if(dist<stepsize/subsampleChecks) {return true;} }
+      else { if(dist<stepsize) {return true;}}
     }
   }
 
@@ -729,7 +758,7 @@ int MR_RRT_PathFinder::stepConnect() {
     //cout << "ADSKJHASDKJHJKASD" << endl;
     //arr pathT = rrtT->getPathFromNode(rrtT->nearestID);
     revertPath(path);
-    //path.append(pathT);
+    path.append(qT);
     cout << "Path constructed with length: " << path.d0 << endl;
 
     //display

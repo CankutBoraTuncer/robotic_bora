@@ -65,6 +65,7 @@ struct MR_RRT_PathFinder {
   std::map<int, shared_ptr<MR_RRT_SingleTree>> rrtRobots0;
   std::map<int, shared_ptr<MR_RRT_SingleTree>> rrtRobotsT;
   std::map<int, arr> rrtPaths;
+  std::map<int, shared_ptr<MR_RRT_SingleTree>> rrtPathTrees;
 
   //parameters
   double stepsize;
