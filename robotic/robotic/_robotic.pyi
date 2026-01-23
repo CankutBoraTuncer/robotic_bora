@@ -279,6 +279,10 @@ class Config:
         """
         get access to a frame by name; use the Frame methods to set/get frame properties
         """
+    def getFrame(self, frameID: int) -> Frame:
+        """
+        get access to a frame by name; use the Frame methods to set/get frame properties
+        """
     def getFrameDimension(self) -> int:
         """
         get the total number of frames
@@ -291,6 +295,17 @@ class Config:
         """
         get the frame state as a n-times-7 numpy matrix, with a 7D pose per frame
         """
+
+    def getRobotJointIndices(self, robotName: str) -> numpy.ndarray[numpy.int32]:
+        """
+        get the indices of the joints that belong to the given robot
+        """
+    
+    def getRobotJointIndices(self, robotID: int) -> numpy.ndarray[numpy.int32]:
+        """
+        get the indices of the joints that belong to the given robot
+        """
+        
     def getFrames(self) -> list[Frame]:
         ...
     def testFunction(self) -> list[Frame]:

@@ -308,7 +308,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(const arr& x, const std::map
 
   arr lastValue;
   for(auto& [key, value] : frame) {
-    cout << key << ", " << value[depth] << " depth: " << depth <<  endl;
+    //cout << key << ", " << value[depth] << " depth: " << depth <<  endl;
     if (depth < value.N) {
 
       arr pos = {value[depth](0), value[depth](1), 0.2};
@@ -440,11 +440,11 @@ shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<int, 
     }
   }
 
-  cout << "Query with stepSize: " << stepSize << ", subsampleChecks: " << subsampleChecks << ", isForwardStep: " << isForwardStep <<  endl;
+  //cout << "Query with stepSize: " << stepSize << ", subsampleChecks: " << subsampleChecks << ", isForwardStep: " << isForwardStep <<  endl;
   
     arr curState = C.getJointState();
-    cout << "Set joint states: " << x <<  endl;
-    cout << "Target joint states: " << qT <<  endl;
+    //cout << "Set joint states: " << x <<  endl;
+    //cout << "Target joint states: " << qT <<  endl;
     
 
     //C.view(true, "before setJointState");
@@ -464,7 +464,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<int, 
         }
       }
 
-      cout << "JS: " << js << ", RX: " << rx << ", CX: " << cx <<  endl;
+      // cout << "JS: " << js << ", RX: " << rx << ", CX: " << cx <<  endl;
 
       arr delta = js - rx;
       arr curDelta = js - cx;
@@ -473,14 +473,14 @@ shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<int, 
       double dist = length(delta);
       
       arr t_j;
-      cout << "Robot: " << robot << " Current vs Target: " << curDist << ", Set vs Target: " << dist << " Limit " << stepSize << endl;
+      // cout << "Robot: " << robot << " Current vs Target: " << curDist << ", Set vs Target: " << dist << " Limit " << stepSize << endl;
       
       double threshold =  subsampleChecks > 0 ? (stepSize / subsampleChecks): stepSize;
       if (curDist < threshold) {nx.append(cx); t_j = cx;}
       else {nx.append(rx); t_j = rx;}     
    
-      cout << "Current State for robot: " << robot << " " << C.frames.elem(robot)->getJointState() << " Set State for Robot" << t_j <<  endl;
-      cout << "-------------------------" <<  endl;
+      // cout << "Current State for robot: " << robot << " " << C.frames.elem(robot)->getJointState() << " Set State for Robot" << t_j <<  endl;
+      // cout << "-------------------------" <<  endl;
       C.frames.elem(robot)->setJointState(t_j);
       int idx = 0;
       for (uint i=0; i<jointMask.N; i++) {
@@ -493,7 +493,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<int, 
 
     }
  
-    cout << "New joint states: " << x <<  endl;
+    // cout << "New joint states: " << x <<  endl;
 
   
   //C.view(true, "before setJointState");
@@ -571,7 +571,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<int, 
 #endif
       qr->side_J[i] = (eye(3) - (z^z))* (Ja - Jb);
       
-      cout << "Collision between: " << p.a->name << " and " << p.b->name << " Distance: " << qr->coll_y[i](0) << endl;
+      // cout << "Collision between: " << p.a->name << " and " << p.b->name << " Distance: " << qr->coll_y[i](0) << endl;
       // Track per-robot collisions: identify which robots are involved in this collision
       for(const auto& [robot_id, jointMask] : robots) {
         rai::Frame* robot_frame = C.frames.elem(robot_id);
@@ -580,7 +580,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<int, 
         // Check if either frame in collision involves this robot or its parts
         bool involves_robot = false;
         if(p.a->ID == robot_frame->ID || p.b->ID == robot_frame->ID) involves_robot = true;
-        cout << "INVOLVES ROBOT: " << robot_id << " " << involves_robot << endl;
+        // cout << "INVOLVES ROBOT: " << robot_id << " " << involves_robot << endl;
         if(involves_robot) {
           // Add collision distance and Jacobian for this robot
           // If there are multiple collisions for the same robot, the minimum distance is kept
@@ -650,7 +650,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<int, 
     for (const auto& [robot, jointMask] : robots) {
 
       if(isFinished.at(robot)) {
-        cout << "Robot: " << robot << " is finished, keeping current joint state." << endl;
+        // cout << "Robot: " << robot << " is finished, keeping current joint state." << endl;
         continue;
       }
       arr rx;
@@ -667,7 +667,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<int, 
 
     
 
-    cout << "New joint states: " << x <<  endl;
+    // cout << "New joint states: " << x <<  endl;
 
   if(computeAllCollisions) {
     //C.stepSwift();
@@ -738,7 +738,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<int, 
 #endif
       qr->side_J[i] = (eye(3) - (z^z))* (Ja - Jb);
       
-      cout << "Collision between: " << p.a->name << " and " << p.b->name << " Distance: " << qr->coll_y[i](0) << endl;
+      // cout << "Collision between: " << p.a->name << " and " << p.b->name << " Distance: " << qr->coll_y[i](0) << endl;
       // Track per-robot collisions: identify which robots are involved in this collision
       for(const auto& [robot_id, jointMask] : robots) {
         rai::Frame* robot_frame = C.frames.elem(robot_id);
@@ -747,7 +747,7 @@ shared_ptr<QueryResult> ConfigurationProblem::query(arr& x, const std::map<int, 
         // Check if either frame in collision involves this robot or its parts
         bool involves_robot = false;
         if(p.a->ID == robot_frame->ID || p.b->ID == robot_frame->ID) involves_robot = true;
-        cout << "INVOLVES ROBOT: " << robot_id << " " << involves_robot << endl;
+        // cout << "INVOLVES ROBOT: " << robot_id << " " << involves_robot << endl;
         if(involves_robot) {
           // Add collision distance and Jacobian for this robot
           // If there are multiple collisions for the same robot, the minimum distance is kept

@@ -105,6 +105,7 @@ struct Configuration {
   Frame* operator[](const char* name) const { return getFrame(name, true); }  ///< same as getFrame()
   Frame* operator()(int i) const { return frames(i); } ///< same as 'frames.elem(i)'  (the i-th frame)
   Frame* getFrame(const char* name, bool warnIfNotExist=true, bool reverse=false) const;
+  Frame* getFrame(int id) const;
   FrameL getFrames(const uintA& ids) const;
   FrameL getFrames(const StringA& names) const;
   uintA getFrameIDs(const StringA& names) const;
@@ -132,6 +133,8 @@ struct Configuration {
   arr getFrameState() const { return getFrameState(frames); } ///< same as getFrameState() for all \ref frames
   arr getFrameState(const FrameL& F) const;
   arr getFrameState(const uintA& F) const { return getFrameState(getFrames(F)); } ///< same as getFrameState() with getFrames()
+  arr getRobotJointIndices(const uint robotID) const;
+  arr getRobotJointIndices(const rai::String& robotName) const;
 
   /// @name set state
   void setJointState(const arr& _q);

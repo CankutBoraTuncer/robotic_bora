@@ -87,6 +87,14 @@ void init_Config(pybind11::module& m) {
   pybind11::arg("warnIfNotExist")=true
       )
 
+  .def("getFrame", [](shared_ptr<rai::Configuration>& self, int frameID) {
+    rai::Frame* f = self->frames.elem(frameID);
+    return shared_ptr<rai::Frame>(f, &null_deleter);  //giving it a non-sense deleter!
+  },
+  "get access to a frame by id; use the Frame methods to set/get frame properties",
+  pybind11::arg("frameID")
+      )
+
   .def("frame", [](shared_ptr<rai::Configuration>& self, const std::string& frameName, bool warnIfNotExist) {
     rai::Frame* f = self->getFrame(frameName.c_str(), warnIfNotExist);
     return shared_ptr<rai::Frame>(f, &null_deleter);  //giving it a non-sense deleter!
@@ -163,6 +171,19 @@ void init_Config(pybind11::module& m) {
     return arr2numpy(X);
   },
   "get the frame state as a n-times-7 numpy matrix, with a 7D pose per frame"
+      )
+
+  .def("getRobotJointIndices", [](shared_ptr<rai::Configuration>& self, const uint robotID) {
+    arr indices = self->getRobotJointIndices(robotID);
+    return arr2numpy(indices);
+  },
+  "get the joint indices corresponding to the given robotID"
+      )
+  .def("getRobotJointIndices", [](shared_ptr<rai::Configuration>& self, const std::string& robotName) {
+    arr indices = self->getRobotJointIndices(rai::String(robotName.c_str()));
+    return arr2numpy(indices);
+  },
+  "get the joint indices corresponding to the given robot name"
       )
 
   .def("setFrameState", [](shared_ptr<rai::Configuration>& self, const std::vector<double>& X, const std::vector<std::string>& frames) {

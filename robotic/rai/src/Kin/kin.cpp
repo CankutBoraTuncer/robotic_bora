@@ -666,6 +666,57 @@ arr Configuration::getFrameState(const FrameL& F) const {
   return X;
 }
 
+arr Configuration::getRobotJointIndices(const uint robotID) const {
+  uint N = getJointStateDimension();
+  arr indicator(N);
+  indicator.setZero();
+  
+  Frame* robotRoot = frames.elem(robotID);
+  
+  for(Dof* dof : activeDofs) {
+    if(!dof->mimic && dof->frame) {
+      // Check if this DOF's frame is part of the robot's subtree
+      Frame* f = dof->frame;
+      while(f) {
+        if(f->ID == robotID) {
+          for(uint k = 0; k < dof->dim; k++) {
+            indicator(dof->qIndex + k) = 1.0;
+          }
+          break;
+        }
+        f = f->parent;
+      }
+    }
+  }
+  return indicator;
+}
+
+arr Configuration::getRobotJointIndices(const rai::String& robotName) const {
+  uint N = getJointStateDimension();
+  arr indicator(N);
+  indicator.setZero();
+  
+  Frame* robotRoot = getFrame(robotName);
+  
+  for(Dof* dof : activeDofs) {
+    if(!dof->mimic && dof->frame) {
+      // Check if this DOF's frame is part of the robot's subtree
+      Frame* f = dof->frame;
+      while(f) {
+        if(f->ID == robotRoot->ID) {
+          for(uint k = 0; k < dof->dim; k++) {
+            indicator(dof->qIndex + k) = 1.0;
+          }
+          break;
+        }
+        f = f->parent;
+      }
+    }
+  }
+  return indicator;
+}
+
+
 /// set the q-vector (all joint and force DOFs)
 void Configuration::setJointState(const arr& _q) {
   setJointStateCount++; //global counter

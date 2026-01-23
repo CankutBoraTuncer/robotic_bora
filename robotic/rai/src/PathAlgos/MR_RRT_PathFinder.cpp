@@ -175,23 +175,23 @@ arr MR_RRT_SingleTree::getNewSample(const arr& target, const std::map<int, arr>&
 
   //without side stepping, we're done
   isSideStep = false;
-  cout << "p_sideStep: " << p_sideStep << " recursionDepth: " << recursionDepth << endl;
+  // std::cout << "p_sideStep: " << p_sideStep << " recursionDepth: " << recursionDepth << endl;
   if(p_sideStep<=0. || recursionDepth >= 3) return JS;
 
   
   
-  cout << "Checking side stepping for robots: " << qr->coll_y_robots.size() << endl;
+  // std::cout << "Checking side stepping for robots: " << qr->coll_y_robots.size() << endl;
   for (const auto& [robot_name, jointMask] : robots) {
     //check whether this is a predicted collision for this robot
     bool predictedCollision=false;
     if(qr->coll_y_robots.find(robot_name) != qr->coll_y_robots.end()) {
       arr y = qr->coll_y_robots[robot_name] + qr->coll_J_robots[robot_name] * delta;
-      cout << "Robot: " << robot_name << " Predicted collision values: " << y << endl;
+      // std::cout << "Robot: " << robot_name << " Predicted collision values: " << y << endl;
       if(min(y)<0.) predictedCollision = true;
     }
     if(predictedCollision && p_sideStep>0. && rnd.uni()<p_sideStep) {
       isSideStep=true;
-      cout << "SIDE STEPPING FOR ROBOT: " << robot_name << endl;
+      // std::cout << "SIDE STEPPING FOR ROBOT: " << robot_name << endl;
 
       //compute new target
       arr d = qr->getSideStep();
@@ -343,7 +343,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
       }
       arr diff = rp - np;
       double dist = length(diff);
-      cout << "Robot: " << robot << " Distance to nearest node: " << dist << " " <<  stepsize << " " << subsampleChecks << endl;
+      // std::cout << "Robot: " << robot << " Distance to nearest node: " << dist << " " <<  stepsize << " " << subsampleChecks << endl;
       if(subsampleChecks>0) { if(dist<stepsize/subsampleChecks) {isConnected = false; return true;} }
       else { if(dist<stepsize) {isConnected = false; return true;}}
     }
@@ -389,7 +389,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   if (forward) {
     for (const auto& [robot, path_tree] : rrtPathTrees){
       if (!isFinished[robot]) continue;
-      cout << "Getting goal for robot: " << robot << endl;
+      // std::cout << "Getting goal for robot: " << robot << endl;
       arr r_j;
       arr jointMask = robots[robot];
 
@@ -409,12 +409,12 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
           k++;
         }
       }
-      cout << "Robot goal joints: " << rq << endl;
+      // std::cout << "Robot goal joints: " << rq << endl;
     }
   } else {
     for (const auto& [robot, path_tree] : rrtPathTrees){
       if (!isFinished[robot]) continue;
-      cout << "Getting goal for robot: " << robot << endl;
+      // std::cout << "Getting goal for robot: " << robot << endl;
       arr r_j;
       arr jointMask = robots[robot];
 
@@ -434,7 +434,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
           k++;
         }
       }
-      cout << "Robot goal joints: " << rq << endl;
+      // std::cout << "Robot goal joints: " << rq << endl;
     }
   }
   
@@ -516,7 +516,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
       CHECK_EQ(nearestNode.N, q_robot.N, "robot-space dim mismatch for '" << robot << "'");
       double dist = length(q_robot - nearestNode);
 
-      cout << "Robot: " << robot << " Distance to nearest node: " << dist << " " << stepsize << " " << subsampleChecks << endl;
+      // std::cout << "Robot: " << robot << " Distance to nearest node: " << dist << " " << stepsize << " " << subsampleChecks << endl;
 
       if(subsampleChecks>0) { if(dist > stepsize/subsampleChecks) { isConnected = false;} 
                               else {isFinished[robot] = true;} }
@@ -526,7 +526,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
       
      if(isFinished[robot]){
-      cout << "Robot: " << robot << " is connected!" << endl;
+      // std::cout << "Robot: " << robot << " is connected!" << endl;
        // Store the path for this robot as a tree  
       arr path_r;
       arr path_t;
@@ -551,7 +551,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
         }
         rrtPathTrees[robot] = rrt_path;
       }
-      cout << "isFinished status: " << isFinished[robot] << endl;
+      // std::cout << "isFinished status: " << isFinished[robot] << endl;
     }
     if (forward) {
       arr diff = q - qT;
@@ -604,7 +604,7 @@ MR_RRT_PathFinder::MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& _start
     if(!q0ret_robot->isFeasible) { LOG(0) <<"initializing with infeasible q0:"; q0ret_robot->writeDetails(std::cout, P); }
     if(!qTret_robot->isFeasible) { LOG(0) <<"initializing with infeasible qT:"; qTret_robot->writeDetails(std::cout, P); }
     
-    cout << "Initializing RRT for robot: " << robot << endl;
+    // std::cout << "Initializing RRT for robot: " << robot << endl;
     rrtRobots0[robot] = make_shared<MR_RRT_SingleTree>(q0_robot, q0ret_robot);
     rrtRobotsT[robot] = make_shared<MR_RRT_SingleTree>(qT_robot, qTret_robot);
 
@@ -705,7 +705,7 @@ int MR_RRT_PathFinder::stepConnect() {
     }
 
     
-    cout << "Constructing final path..." << endl;
+    //cout << "Constructing final path..." << endl;
     // Get all robots paths and combine
     int maxPathLength = 0;
     
@@ -716,7 +716,7 @@ int MR_RRT_PathFinder::stepConnect() {
     }
     
     /**/
-    cout << "Max path length across robots: " << maxPathLength << endl;
+    //cout << "Max path length across robots: " << maxPathLength << endl;
     
     for (uint j = 0; j < (uint)maxPathLength; ++j){
       arr qj;
@@ -755,11 +755,11 @@ int MR_RRT_PathFinder::stepConnect() {
     //revertPath(path);
     
     path = rrt0->getPathFromNode(rrt0->nearestID);
-    //cout << "ADSKJHASDKJHJKASD" << endl;
+
     //arr pathT = rrtT->getPathFromNode(rrtT->nearestID);
     revertPath(path);
     path.append(qT);
-    cout << "Path constructed with length: " << path.d0 << endl;
+    //cout << "Path constructed with length: " << path.d0 << endl;
 
     //display
     if(verbose>1) {
