@@ -305,7 +305,7 @@ class Config:
         """
         get the indices of the joints that belong to the given robot
         """
-        
+
     def getFrames(self) -> list[Frame]:
         ...
     def testFunction(self) -> list[Frame]:
@@ -1348,6 +1348,8 @@ class MR_PathFinder:
         only after setProblem
         """
     def setProblem(self, Configuration: Config, starts: arr, goals: arr, robots: arr, collisionTolerance: float = 0.0001, isIndependent: bool = False) -> None:
+        ...
+    def setProblem(self, Configuration: Config, starts: arr, goals: arr, robots: arr, frames: arr, collisionTolerance: float = 0.0001, isIndependent: bool = False) -> None:
         ...
     def solve(self) -> SolverReturn:
         ...

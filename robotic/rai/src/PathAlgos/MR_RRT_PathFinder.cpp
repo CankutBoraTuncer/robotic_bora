@@ -450,8 +450,21 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   double org_collisionTolerance = P.collisionTolerance;
   if(pr->totalCollision>P.collisionTolerance) P.collisionTolerance = pr->totalCollision + 1e-6;
 
+  uint depth = 0;
+  if(rrt_A.parent.N > 1) {
+    // Update depth based on parent and make sure depth is smaller than length of frames
+    depth = rrt_A.queries(parentID)->depth + 1;
+    if(depth >= maxDepth) depth = maxDepth - 1;
+  }
+
+  shared_ptr<QueryResult> qr;
   //evaluate the sample
-  auto qr = P.query(q);
+  if (forward) {
+    qr = P.query(q, frames, depth);
+  } else {
+    qr = P.query(q);
+  }
+  
 
   if(isForwardStep) {  n_forwardStep++; if(qr->isFeasible) n_forwardStepGood++; }
   if(!isForwardStep) {  n_rndStep++; if(qr->isFeasible) n_rndStepGood++; }
@@ -592,7 +605,7 @@ MR_RRT_PathFinder::MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& _start
 
   for (const auto& [robot, jointMask] : robots) {
     arr q0_robot, qT_robot;
-    for (uint i = 0; i < jointMask.N; ++i) {
+    for (uint i = 0; i < jointMask.N; i++) {
       if (jointMask(i) == 1) {
         q0_robot.append(q0(i));
         qT_robot.append(qT(i));
@@ -801,13 +814,16 @@ void MR_PathFinder::setProblem(const Configuration& C, const arr& starts, const 
   problem = make_shared<ConfigurationProblem>(C, true, collisionTolerance, 1);
   problem->verbose=0;
   rrtSolver = make_shared<MR_RRT_PathFinder>(*problem, starts, goals, robots);
+}
 
+void MR_PathFinder::setProblem(const Configuration& C, const arr& starts, const arr& goals, const std::map<int, arr>& robots, const std::map<int, arr>& frames,  double collisionTolerance, bool isIndependent) {
+  if(collisionTolerance<0.) collisionTolerance = rai::getParameter<double>("rrt/collisionTolerance", 1e-4);
+  problem = make_shared<ConfigurationProblem>(C, true, collisionTolerance, 1);
+  problem->verbose=0;
+  rrtSolver = make_shared<MR_RRT_PathFinder>(*problem, starts, goals, robots);
+  rrtSolver->frames = frames;
+  rrtSolver->maxDepth = frames.empty() ? 0 : frames.begin()->second.d0;
 
-  cout <<"RRT PathFinder: stepsize=" <<rrtSolver->stepsize
-       <<", subsampleChecks=" <<rrtSolver->subsampleChecks
-       <<", maxIters=" <<rrtSolver->maxIters
-       <<", collisionTolerance=" <<collisionTolerance
-       <<endl;
 }
 
 void MR_PathFinder::setExplicitCollisionPairs(const StringA& collisionPairs) {

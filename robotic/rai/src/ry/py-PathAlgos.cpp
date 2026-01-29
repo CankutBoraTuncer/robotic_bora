@@ -52,7 +52,8 @@ void init_PathAlgos(pybind11::module& m) {
   // 4. New MR_RRT_PathFinder Class Binding    
   pybind11::class_<rai::MR_PathFinder, std::shared_ptr<rai::MR_PathFinder>>(m, "MR_PathFinder", "todo doc")
       .def(pybind11::init<>())
-      .def("setProblem", &rai::MR_PathFinder::setProblem, "", pybind11::arg("Configuration"), pybind11::arg("starts"), pybind11::arg("goals"), pybind11::arg("frames"), pybind11::arg("collisionTolerance")=1e-4, pybind11::arg("isIndependent")=false)
+      .def("setProblem", pybind11::overload_cast<const rai::Configuration&, const arr&, const arr&, const std::map<int, arr>&, const std::map<int, arr>&, double, bool>(&rai::MR_PathFinder::setProblem), "", pybind11::arg("Configuration"), pybind11::arg("starts"), pybind11::arg("goals"), pybind11::arg("robots"), pybind11::arg("frames"), pybind11::arg("collisionTolerance")=1e-4, pybind11::arg("isIndependent")=false)
+      .def("setProblem", pybind11::overload_cast<const rai::Configuration&, const arr&, const arr&, const std::map<int, arr>&, double, bool>(&rai::MR_PathFinder::setProblem), "", pybind11::arg("Configuration"), pybind11::arg("starts"), pybind11::arg("goals"), pybind11::arg("robots"), pybind11::arg("collisionTolerance")=1e-4, pybind11::arg("isIndependent")=false)
       .def("setExplicitCollisionPairs", &rai::MR_PathFinder::setExplicitCollisionPairs, "only after setProblem", pybind11::arg("collisionPairs"))
       .def("solve", &rai::MR_PathFinder::solve, "")
       .def("get_resampledPath", &rai::MR_PathFinder::get_resampledPath, "")

@@ -67,6 +67,8 @@ struct MR_RRT_PathFinder {
   std::map<int, arr> rrtPaths;
   std::map<int, shared_ptr<MR_RRT_SingleTree>> rrtPathTrees;
 
+  std::map<int, arr> frames;
+
   //parameters
   double stepsize;
   int maxIters=5000;
@@ -82,6 +84,7 @@ struct MR_RRT_PathFinder {
   //counters
   uint iters=0;
   uint n_backStep=0, n_backStepGood=0, n_sideStep=0, n_sideStepGood=0, n_forwardStep=0, n_forwardStepGood=0, n_rndStep=0, n_rndStepGood=0;
+  uint maxDepth=0;
 
   //output
   arr path;
@@ -113,6 +116,7 @@ struct MR_PathFinder : NonCopyable {
   std::shared_ptr<SolverReturn> ret;
 
   void setProblem(const rai::Configuration& C, const arr& starts, const arr& goals, const std::map<int, arr>& robots, double collisionTolerance=-1., bool isIndependent=false);
+  void setProblem(const rai::Configuration& C, const arr& starts, const arr& goals, const std::map<int, arr>& robots, const std::map<int, arr>& frames, double collisionTolerance=-1., bool isIndependent=false);
 
   void setExplicitCollisionPairs(const StringA& collisionPairs);
 
