@@ -77,6 +77,14 @@ void init_Config(pybind11::module& m) {
   pybind11::arg("prefix")=str{},
   pybind11::arg("tau")=1.
       )
+  .def("addDeepConfigurationCopy", [](shared_ptr<rai::Configuration>& self, shared_ptr<rai::Configuration>& other, const str& prefix, double tau) {
+    rai::Frame* f = self->addDeepConfigurationCopy(*other, prefix, tau);
+    return shared_ptr<rai::Frame>(f, &null_deleter);  //giving it a non-sense deleter!
+  }, "",
+  pybind11::arg("config"),
+  pybind11::arg("prefix")=str{},
+  pybind11::arg("tau")=1.
+      )
 
   .def("getFrame", [](shared_ptr<rai::Configuration>& self, const std::string& frameName, bool warnIfNotExist) {
     rai::Frame* f = self->getFrame(frameName.c_str(), warnIfNotExist);
@@ -257,6 +265,12 @@ part of the joint state and define the number of DOFs",
   "change the configuration by creating a rigid joint from frame1 to frame2, adopting their current \
 relative pose. This also breaks the first joint that is parental to frame2 and reverses the \
 topological order from frame2 to the broken joint"
+      )
+
+  .def("dettach", [](shared_ptr<rai::Configuration>& self, const std::string& frame1) {
+    self->dettach(frame1.c_str());
+  },
+  "change the configuration by removing the joint between frame1 and frame2. This makes frame2 a root frame."
       )
 
   .def("computeCollisions", [](shared_ptr<rai::Configuration>& self) {

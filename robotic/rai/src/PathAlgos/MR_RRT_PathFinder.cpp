@@ -361,9 +361,21 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   bool isSideStep, isForwardStep;
   
   arr qG;
-  double prob = forward ? 0.7 : 0.7;
+  double prob = forward ? 0.5 : 0.5;
   arr t;
 
+    // If all robots are finished increase the prob 
+  bool allFinished = true;
+  for (const auto& [robot, finished] : isFinished) {
+    if (!finished) {
+      allFinished = false;
+      break;
+    }
+  }
+  if (allFinished) {
+    prob = 0.9;
+  }
+  
   if(rnd.uni()<prob) {
     t = rrt_B.getRandomNode();
     isForwardStep = true;
@@ -381,7 +393,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
     #endif
         isForwardStep = false;
   }
-
+  
   arr js = rrt_A.getNode(rrt_A.ann.getNN(t));
 
 
@@ -462,8 +474,9 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   if (forward) {
     qr = P.query(q, frames, depth);
   } else {
-    qr = P.query(q);
+    qr = P.query(q, frames, maxDepth-1);
   }
+
   
 
   if(isForwardStep) {  n_forwardStep++; if(qr->isFeasible) n_forwardStepGood++; }
@@ -490,6 +503,8 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
   //finally adding the new node to the tree
   if(qr->isFeasible){
+    //if (forward)
+    //P.C.view(true, STRING("Adding node to tree with depth: " << depth));
     rrt_A.add(q, parentID, qr);
     bool isConnected = true;
     

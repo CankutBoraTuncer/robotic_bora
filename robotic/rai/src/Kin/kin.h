@@ -98,6 +98,7 @@ struct Configuration {
   Frame* addAssimp(const char* filename);
   Frame* addCopy(const FrameL& F, const DofL& _dofs, const str& prefix= {});
   Frame* addConfigurationCopy(const Configuration& C, const str& prefix= {}, double tau=1.);
+  Frame* addDeepConfigurationCopy(const Configuration& C, const str& prefix= {}, double tau=1.);  
   void delFrame(const char* name);
   void delSubtree(const char* name);
 
@@ -190,6 +191,9 @@ struct Configuration {
   bool checkConsistency() const;
   Joint* attach(Frame* a, Frame* b);
   Joint* attach(const char* a, const char* b);
+  Joint* dettach(Frame* a);
+  Joint* dettach(const char* a);
+
   uintAA getCollisionExcludePairIDs(int verbose=0);
   FrameL getCollidablePairs();
   void prefixNames(bool clear=false);

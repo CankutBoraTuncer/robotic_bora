@@ -215,6 +215,8 @@ class Config:
         """
     def addConfigurationCopy(self, config: Config, prefix: ... = '', tau: float = 1.0) -> Frame:
         ...
+    def addDeepConfigurationCopy(self, config: Config, prefix: ... = '', tau: float = 1.0) -> Frame:
+        ...
     def addFile(self, filename: str, namePrefix: str = None) -> Frame:
         """
         add the contents of the file to C
@@ -235,6 +237,11 @@ class Config:
         """
         change the configuration by creating a rigid joint from frame1 to frame2, adopting their current relative pose. This also breaks the first joint that is parental to frame2 and reverses the topological order from frame2 to the broken joint
         """
+    def dettach(self, arg0: str) -> None:
+        """
+        change the configuration by removing the joint between frame1 and frame2. This makes frame2 a root frame.
+        """
+
     def checkConsistency(self) -> bool:
         """
         internal use

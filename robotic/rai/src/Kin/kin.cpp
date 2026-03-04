@@ -393,6 +393,47 @@ Frame* Configuration::addConfigurationCopy(const Configuration& C, const str& pr
   return f;
 }
 
+Frame* Configuration::addDeepConfigurationCopy(const Configuration& C, const str& prefix, double tau) {
+  // First do regular copy
+  Frame* f=addCopy(C.frames, C.otherDofs, prefix);
+  if(tau>=0.) f->tau=tau;
+  
+  // Then deep copy all meshes
+  for(uint i=0; i<C.frames.N; i++) {
+    Frame* src = C.frames.elem(i);
+    Frame* dst = frames.elem(f->ID + i);
+    
+    if(src->shape && src->shape->_mesh && dst->shape) {
+      // Create new mesh and deep copy all data
+      dst->shape->_mesh = make_shared<Mesh>();
+      dst->shape->_mesh->V = src->shape->_mesh->V;
+      dst->shape->_mesh->Vn = src->shape->_mesh->Vn;
+      dst->shape->_mesh->C = src->shape->_mesh->C;
+      dst->shape->_mesh->T = src->shape->_mesh->T;
+      dst->shape->_mesh->Tn = src->shape->_mesh->Tn;
+      dst->shape->_mesh->Tt = src->shape->_mesh->Tt;
+      dst->shape->_mesh->tex = src->shape->_mesh->tex;
+      dst->shape->_mesh->texImg = src->shape->_mesh->texImg;
+      dst->shape->_mesh->cvxParts = src->shape->_mesh->cvxParts;
+      dst->shape->_mesh->glX = src->shape->_mesh->glX;
+      dst->shape->_mesh->version = src->shape->_mesh->version;
+      dst->shape->_mesh->isArrayFormatted = src->shape->_mesh->isArrayFormatted;
+    }
+    
+    if(src->shape && src->shape->_sscCore && dst->shape) {
+      // Deep copy sscCore mesh
+      dst->shape->_sscCore = make_shared<Mesh>();
+      dst->shape->_sscCore->V = src->shape->_sscCore->V;
+      dst->shape->_sscCore->Vn = src->shape->_sscCore->Vn;
+      dst->shape->_sscCore->C = src->shape->_sscCore->C;
+      dst->shape->_sscCore->T = src->shape->_sscCore->T;
+      dst->shape->_sscCore->Tn = src->shape->_sscCore->Tn;
+    }
+  }
+  
+  return f;
+}
+
 void Configuration::delFrame(const char* name){
   rai::Frame* p = getFrame(name, true);
   if(p) delete p;
@@ -1387,6 +1428,46 @@ Joint* Configuration::attach(Frame* a, Frame* b) {
 
 Joint* Configuration::attach(const char* _a, const char* _b) {
   return attach(getFrame(_a), getFrame(_b));
+}
+
+Joint* Configuration::dettach(Frame* a){
+  a = a->getUpwardLink();
+
+  // Check if the frame is not attached (is already a root)
+  if (!a->parent) {
+    //LOG(0) << "Frame '" << a->name << "' is not attached to anything (already a root). No detachment needed.";
+    return nullptr;
+  }
+
+  // Check if the frame has a joint - if not, it cannot be detached properly
+  if (!a->joint) {
+    //LOG(0) << "Frame '" << a->name << "' has no joint. Cannot detach.";
+    return nullptr;
+  }
+
+  // Only detach rigid joints (created by attach() function)
+  // Non-rigid joints are part of the robot's structure and should not be detached
+  if (a->joint->type != JT_rigid) {
+    //LOG(0) << "Frame '" << a->name << "' has a non-rigid joint (part of robot structure). Not detaching.";
+    return nullptr;
+  }
+
+  // Check if parent is part of a robot (has a joint that is non-rigid)
+  // Only detach if the parent frame is a robot link (has a non-rigid joint)
+  if (!a->parent->joint || a->parent->joint->type == JT_rigid) {
+    //LOG(0) << "Parent frame '" << a->parent->name << "' is not part of a robot. Not detaching.";
+    return nullptr;
+  }
+  
+  //cout << "Detaching '" << a->name << "' from robot parent '" << a->parent->name << "'" << endl;
+  Joint* j = a->joint;
+  a->unLink();
+  return j;
+}
+
+
+Joint* Configuration::dettach(const char* _a) {
+  return dettach(getFrame(_a));
 }
 
 uintAA Configuration::getCollisionExcludePairIDs(int verbose) {
