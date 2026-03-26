@@ -411,6 +411,7 @@ void init_Optim(pybind11::module& m) {
       .def_readwrite("sos", &SolverReturn::sos)
       .def_readwrite("ineq", &SolverReturn::ineq)
       .def_readwrite("eq", &SolverReturn::eq)
+      .def_readwrite("finished_robs", &SolverReturn::finished_robs)
   .def("__str__", [](std::shared_ptr<SolverReturn>& self) {  str s;  s <<(*self);  return std::string(s.p); })
 
   .def("dict", [](std::shared_ptr<SolverReturn>& self) {
@@ -423,6 +424,7 @@ void init_Optim(pybind11::module& m) {
       {"sos", self->sos},
       {"ineq", self->ineq},
       {"eq", self->eq},
+      {"finished_robs", self->finished_robs},
     });
   })
 

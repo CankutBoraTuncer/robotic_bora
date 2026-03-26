@@ -857,7 +857,7 @@ shared_ptr<SolverReturn> MR_PathFinder::solve() {
   ret->feasible = rrtSolver->path.N; //(r==1);
   ret->x = rrtSolver->path;
   ret->evals = rrtSolver->iters;
-
+  ret->finished_robs = rrtSolver->isFinished;
   return ret;
 }
 

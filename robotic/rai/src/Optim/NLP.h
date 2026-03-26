@@ -9,6 +9,7 @@
 #pragma once
 
 #include "../Core/array.h"
+#include <map>
 
 //===========================================================================
 
@@ -166,7 +167,9 @@ struct SolverReturn {
   bool feasible=false;
   double sos=-1., f=-1., ineq=-1., eq=-1.;
   bool done=false;
+  std::map<int, bool> finished_robs;
   void write(ostream& os) const;
+  
 };
 stdOutPipe(SolverReturn)
 

@@ -490,6 +490,12 @@ uintA Configuration::getFrameIDs(const StringA& names) const {
   return I;
 }
 
+uint Configuration::getFrameID(const char* name) const {
+  Frame* f = getFrame(name);
+  if(!f) HALT("frame name '"<<name<<"' doesn't exist");
+  return f->ID;
+}
+
 FrameL Configuration::getJoints(bool activesOnly) const {
   FrameL F;
   for(auto* f:frames) if(f->joint && (!activesOnly || f->joint->active)) F.append(f);

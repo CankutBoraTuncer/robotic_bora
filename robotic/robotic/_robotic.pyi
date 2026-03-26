@@ -312,7 +312,10 @@ class Config:
         """
         get the indices of the joints that belong to the given robot
         """
-
+    def getFrameID(self, frameName: str) -> int:
+        """
+        get the ID of a frame by name
+        """
     def getFrames(self) -> list[Frame]:
         ...
     def testFunction(self) -> list[Frame]:
@@ -1728,6 +1731,7 @@ class SolverReturn:
     """
     return of nlp solve call
     """
+    x: list
     done: bool
     eq: float
     evals: int
@@ -1736,7 +1740,8 @@ class SolverReturn:
     ineq: float
     sos: float
     time: float
-    x: arr
+    finished_robs: dict
+
     def __init__(self) -> None:
         ...
     def __str__(self) -> str:

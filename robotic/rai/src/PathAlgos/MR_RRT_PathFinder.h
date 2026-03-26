@@ -76,9 +76,11 @@ struct MR_RRT_PathFinder {
   int subsampleChecks=0;
   double p_forwardStep=.5;
   double p_sideStep=.0;
-  double p_backwardStep=.0;
+  double p_backwardStep=.0;   
   std::map<int, arr> robots;
+  // Initialize isFinished to false for all robots
   std::map<int, bool> isFinished;
+
   arr q0, qT;
 
   //counters

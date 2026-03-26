@@ -107,6 +107,7 @@ struct Configuration {
   Frame* operator()(int i) const { return frames(i); } ///< same as 'frames.elem(i)'  (the i-th frame)
   Frame* getFrame(const char* name, bool warnIfNotExist=true, bool reverse=false) const;
   Frame* getFrame(int id) const;
+  uint getFrameID(const char* name) const;
   FrameL getFrames(const uintA& ids) const;
   FrameL getFrames(const StringA& names) const;
   uintA getFrameIDs(const StringA& names) const;

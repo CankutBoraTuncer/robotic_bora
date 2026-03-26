@@ -34,6 +34,23 @@ extern rai::Graph& NoGraph; //this is a reference to nullptr! (for optional argu
 //===========================================================================
 
 namespace rai {
+template<class K, class V>
+inline std::ostream& operator<<(std::ostream& os, const std::map<K, V>& m) {
+  os << '{';
+  bool first = true;
+  for(const auto& kv:m) {
+    if(!first) os << ", ";
+    first = false;
+    os << kv.first << ':' << kv.second;
+  }
+  os << '}';
+  return os;
+}
+}
+
+//===========================================================================
+
+namespace rai {
 struct Node {
   const std::type_info& type;
   Graph& container;
