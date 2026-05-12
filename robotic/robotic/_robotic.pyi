@@ -1741,6 +1741,7 @@ class SolverReturn:
     sos: float
     time: float
     finished_robs: dict
+    finished_idx:dict
 
     def __init__(self) -> None:
         ...

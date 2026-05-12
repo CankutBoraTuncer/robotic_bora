@@ -80,6 +80,7 @@ struct MR_RRT_PathFinder {
   std::map<int, arr> robots;
   // Initialize isFinished to false for all robots
   std::map<int, bool> isFinished;
+  std::map<int, int> finishedIdx;
 
   arr q0, qT;
 

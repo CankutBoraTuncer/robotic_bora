@@ -531,9 +531,9 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
       shared_ptr<MR_RRT_SingleTree> r_B = itB->second;
 
       int parentIDr = r_A->ann.getNN(q_robot);
-      r_A->nearestID = parentID;
       auto qr_1 = P.query(q_robot, robot);
-      r_A->add(q_robot, parentID, qr_1);
+      uint newNodeIDr = r_A->add(q_robot, parentIDr, qr_1);
+      r_A->nearestID = newNodeIDr;
 
       uint nearestIDr = r_B->ann.getNN(q_robot);
       r_B->nearestID = nearestIDr;
@@ -546,11 +546,21 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
       // std::cout << "Robot: " << robot << " Distance to nearest node: " << dist << " " << stepsize << " " << subsampleChecks << endl;
 
-      if(subsampleChecks>0) { if(dist > stepsize/subsampleChecks) { isConnected = false;} 
-                              else {isFinished[robot] = true;} }
-
-      else { if(dist > stepsize) {isConnected = false;} 
-            else {isFinished[robot] = true; } }
+      if(subsampleChecks>0) {
+        if(dist > stepsize/subsampleChecks) {
+          isConnected = false;
+        } else if(!isFinished[robot]) {
+          isFinished[robot] = true;
+          finishedIdx[robot] = (int)newNodeIDr;
+        }
+      } else {
+        if(dist > stepsize) {
+          isConnected = false;
+        } else if(!isFinished[robot]) {
+          isFinished[robot] = true;
+          finishedIdx[robot] = (int)newNodeIDr;
+        }
+      }
 
       
      if(isFinished[robot]){
@@ -637,6 +647,7 @@ MR_RRT_PathFinder::MR_RRT_PathFinder(ConfigurationProblem& _P, const arr& _start
     rrtRobotsT[robot] = make_shared<MR_RRT_SingleTree>(qT_robot, qTret_robot);
 
     isFinished[robot] = false;
+    finishedIdx[robot] = -1;
   }
 
   P.C.setJointState(q0);
@@ -858,6 +869,7 @@ shared_ptr<SolverReturn> MR_PathFinder::solve() {
   ret->x = rrtSolver->path;
   ret->evals = rrtSolver->iters;
   ret->finished_robs = rrtSolver->isFinished;
+  ret->finished_idx = rrtSolver->finishedIdx;
   return ret;
 }
 

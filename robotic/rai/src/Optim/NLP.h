@@ -168,9 +168,10 @@ struct SolverReturn {
   double sos=-1., f=-1., ineq=-1., eq=-1.;
   bool done=false;
   std::map<int, bool> finished_robs;
+  std::map<int, int> finished_idx;
   void write(ostream& os) const;
-  
 };
+
 stdOutPipe(SolverReturn)
 
 //===========================================================================
