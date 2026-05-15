@@ -457,6 +457,12 @@ Frame* Configuration::getFrame(const char* name, bool warnIfNotExist, bool rever
   return 0;
 }
 
+Frame* Configuration::getFrame(int id) const {
+  if(id < 0 || id >= (int)frames.N) return nullptr;
+  return frames.elem(id);
+}
+
+
 /// get all frames of given indices (almost same as \ref frames . Array::sub() )
 FrameL Configuration::getFrames(const uintA& ids) const {
   FrameL F;

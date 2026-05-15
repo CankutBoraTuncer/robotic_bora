@@ -178,8 +178,6 @@ arr MR_RRT_SingleTree::getNewSample(const arr& target, const std::map<int, arr>&
   // std::cout << "p_sideStep: " << p_sideStep << " recursionDepth: " << recursionDepth << endl;
   if(p_sideStep<=0. || recursionDepth >= 3) return JS;
 
-  
-  
   // std::cout << "Checking side stepping for robots: " << qr->coll_y_robots.size() << endl;
   for (const auto& [robot_name, jointMask] : robots) {
     //check whether this is a predicted collision for this robot
@@ -363,18 +361,6 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   arr qG;
   double prob = forward ? 0.5 : 0.5;
   arr t;
-
-    // If all robots are finished increase the prob 
-  bool allFinished = true;
-  for (const auto& [robot, finished] : isFinished) {
-    if (!finished) {
-      allFinished = false;
-      break;
-    }
-  }
-  if (allFinished) {
-    prob = 0.9;
-  }
   
   if(rnd.uni()<prob) {
     t = rrt_B.getRandomNode();
@@ -395,16 +381,13 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   }
   
   arr js = rrt_A.getNode(rrt_A.ann.getNN(t));
-
-
-  
+  /*
   if (forward) {
     for (const auto& [robot, path_tree] : rrtPathTrees){
       if (!isFinished[robot]) continue;
       // std::cout << "Getting goal for robot: " << robot << endl;
       arr r_j;
       arr jointMask = robots[robot];
-
       for (uint i = 0; i < jointMask.N; i++) {
         if (jointMask(i) == 1) {
           r_j.append(js(i));
@@ -449,11 +432,14 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
       // std::cout << "Robot goal joints: " << rq << endl;
     }
   }
-  
+  */
+
   //sample configuration towards target, possibly sideStepping
   arr q = rrt_A.getNewSample(t, robots, stepsize, p_sideStep, isSideStep, 0);
 
   P.C.setJointState(js);
+
+
 
   uint parentID = rrt_A.nearestID;
 
@@ -477,7 +463,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
     qr = P.query(q, frames, maxDepth-1);
   }
 
-  
+
 
   if(isForwardStep) {  n_forwardStep++; if(qr->isFeasible) n_forwardStepGood++; }
   if(!isForwardStep) {  n_rndStep++; if(qr->isFeasible) n_rndStepGood++; }
@@ -508,11 +494,9 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
     rrt_A.add(q, parentID, qr);
     bool isConnected = true;
     
-
     for (const auto& [robot, robotMask] : robots) {
 
       if (isFinished[robot]) continue;
-
 
       arr q_robot;
       arr q_t;
@@ -564,7 +548,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
       
      if(isFinished[robot]){
-      // std::cout << "Robot: " << robot << " is connected!" << endl;
+      std::cout << "Robot: " << robot << " is connected!" << endl;
        // Store the path for this robot as a tree  
       arr path_r;
       arr path_t;
@@ -578,6 +562,13 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
        revertPath(path_r);
        path_r.append(path_t);
        rrtPaths[robot] = path_r;
+
+       // Visualize the path
+       //for (uint i = 1; i < path_r.d0; i++) {
+       //  P.C.getFrame(robot)->setJointState(path_r[i]);
+       //  P.C.view(true, STRING("Path for robot: " << robot));
+       //}
+
        //Generate a tree using this path
        auto qr_path = P.query(path_r[0], robot);  
         shared_ptr<MR_RRT_SingleTree> rrt_path = make_shared<MR_RRT_SingleTree>(path_r[0], qr_path);
@@ -590,14 +581,59 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
         rrtPathTrees[robot] = rrt_path;
       }
       // std::cout << "isFinished status: " << isFinished[robot] << endl;
+    }  
+  }
+
+  // Check if all robots are finished
+  bool allFinished = true;
+  for (const auto& [robot, finished] : isFinished) {
+    if (!finished) {
+      allFinished = false;
+      break;}
+  }
+
+
+  if (allFinished) {
+    // If all finished check for the last time if the full path is collision free otherwise remove the rrt_B node and continue growing rrt_A
+    bool fullPathFeasible = true;
+    path.clear();
+    // Compute max path length across all robots
+    int maxPathLength = 0;
+    for (const auto& [robot, path_r] : rrtPaths) {
+      if (path_r.d0 > maxPathLength) {
+        maxPathLength = path_r.d0;
+      }
     }
-    if (forward) {
-      arr diff = q - qT;
-      double dist = length(diff);
-      
-      if(subsampleChecks>0) { if(dist<stepsize/subsampleChecks) {return true;} }
-      else { if(dist<stepsize) {return true;}}
+    
+    // At each loop iterate each robots path simultaneously and query the configuration for collisions. If any of the robots is in collision, break and set fullPathFeasible to false
+    for (uint i = 0; i < (uint)maxPathLength; i++) {
+      arr q_full;
+      q_full.resize(q0.N);
+      q_full.setZero();
+      for (const auto& [robot, jointMask] : robots) {
+        auto itP = rrtPaths.find(robot);
+        CHECK(itP != rrtPaths.end(), "Missing path for robot_id " << robot);
+        arr path_r = itP->second;
+        uint row = (i < path_r.d0 ? i : path_r.d0 - 1);  // repeat last if shorter
+        uint k = 0;
+        for (uint j = 0; j < jointMask.N; j++) {
+          if (jointMask(j) == 1) {
+            q_full(j) = path_r(row, k);
+            k++;
+          }
+        }
+      }
+      // Cap depth at maxDepth-1 to stay within valid frame indices
+      uint depth = (i < maxDepth ? i : maxDepth - 1);
+      path.append(q_full);
+      auto qr_full = P.query(q_full, frames, depth);
+      //P.C.view(true, STRING("Checking full path at step: " << i));
+      if (!qr_full->isFeasible) {
+        fullPathFeasible = false;
+        break;
+      }
     }
+    if(fullPathFeasible) return true;
   }
 
   return false;
@@ -706,6 +742,7 @@ void MR_RRT_PathFinder::planForward(const arr& q0, const arr& qT) {
 
   path >>FILE("z.path");
 }
+// ===========================================================================
 
 int MR_RRT_PathFinder::stepConnect() {
   iters++;
@@ -746,59 +783,8 @@ int MR_RRT_PathFinder::stepConnect() {
     
     //cout << "Constructing final path..." << endl;
     // Get all robots paths and combine
-    int maxPathLength = 0;
-    
-    for (const auto& [robot, path_r] : rrtPaths) {
-      if (path_r.d0 > maxPathLength) {
-        maxPathLength = path_r.d0;
-      }
-    }
-    
-    /**/
-    //cout << "Max path length across robots: " << maxPathLength << endl;
-    
-    for (uint j = 0; j < (uint)maxPathLength; ++j){
-      arr qj;
-      qj.resize(q0.N);
-      qj.setZero();
-
-      // fill global joint vector from each robot's robot-space path
-      for (const auto& [robot_id, jointMask] : robots) {
-        auto itP = rrtPaths.find(robot_id);
-        CHECK(itP != rrtPaths.end(), "Missing path for robot_id " << robot_id);
-
-        const arr& pr = itP->second;              // shape: Tr x dim_robot
-        uint Tr = pr.d0;
-        uint dim_robot = pr.d1;
-
-        uint row = (j < Tr ? j : Tr - 1);         // repeat last if shorter
-
-        // local column counter in robot-space
-        uint k = 0;
-        for (uint i = 0; i < jointMask.N; ++i) {
-          if (jointMask(i) == 1) {
-            CHECK(k < dim_robot, "robot-space dim mismatch for robot_id " << robot_id);
-            qj(i) = pr(row, k);
-            ++k;
-          }
-        }
-        CHECK(k == dim_robot, "robot-space path dim doesn't match jointMask for robot_id " << robot_id);
-      }
-
-      path.append(qj);
-    }
-
-    
 
     path.reshape(-1, q0.N);
-    //revertPath(path);
-    
-    path = rrt0->getPathFromNode(rrt0->nearestID);
-
-    //arr pathT = rrtT->getPathFromNode(rrtT->nearestID);
-    revertPath(path);
-    path.append(qT);
-    //cout << "Path constructed with length: " << path.d0 << endl;
 
     //display
     if(verbose>1) {
@@ -820,6 +806,8 @@ int MR_RRT_PathFinder::stepConnect() {
 
   return 0;
 }
+
+// ===========================================================================
 
 arr MR_RRT_PathFinder::planConnect() {
   int r=0;
@@ -849,7 +837,6 @@ void MR_PathFinder::setProblem(const Configuration& C, const arr& starts, const 
   rrtSolver = make_shared<MR_RRT_PathFinder>(*problem, starts, goals, robots);
   rrtSolver->frames = frames;
   rrtSolver->maxDepth = frames.empty() ? 0 : frames.begin()->second.d0;
-
 }
 
 void MR_PathFinder::setExplicitCollisionPairs(const StringA& collisionPairs) {
