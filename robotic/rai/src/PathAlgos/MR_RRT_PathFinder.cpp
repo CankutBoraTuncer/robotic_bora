@@ -381,6 +381,14 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   }
   
   arr js = rrt_A.getNode(rrt_A.ann.getNN(t));
+
+  for (auto r : isFinished) {
+    if (r.second) {
+      P.C.getFrame(r.first)->setContact(0);
+    } else {
+      P.C.getFrame(r.first)->setContact(1);
+    }
+  }
   /*
   if (forward) {
     for (const auto& [robot, path_tree] : rrtPathTrees){
@@ -439,8 +447,6 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
   P.C.setJointState(js);
 
-
-
   uint parentID = rrt_A.nearestID;
 
   //special rule: if parent is already in collision, isFeasible = smaller collisions
@@ -462,8 +468,6 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
   } else {
     qr = P.query(q, frames, maxDepth-1);
   }
-
-
 
   if(isForwardStep) {  n_forwardStep++; if(qr->isFeasible) n_forwardStepGood++; }
   if(!isForwardStep) {  n_rndStep++; if(qr->isFeasible) n_rndStepGood++; }
@@ -548,7 +552,7 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
 
       
      if(isFinished[robot]){
-      std::cout << "Robot: " << robot << " is connected!" << endl;
+  
        // Store the path for this robot as a tree  
       arr path_r;
       arr path_t;
@@ -570,15 +574,15 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
        //}
 
        //Generate a tree using this path
-       auto qr_path = P.query(path_r[0], robot);  
-        shared_ptr<MR_RRT_SingleTree> rrt_path = make_shared<MR_RRT_SingleTree>(path_r[0], qr_path);
-        uint nn =0;
-        for (uint i = 1; i < path_r.d0; i++) {
-          qr_path = P.query(path_r[i], robot);
-          rrt_path->add(path_r[i], nn, qr_path);
-          nn +=1;
-        }
-        rrtPathTrees[robot] = rrt_path;
+       //auto qr_path = P.query(path_r[0], robot);  
+       // shared_ptr<MR_RRT_SingleTree> rrt_path = make_shared<MR_RRT_SingleTree>(path_r[0], qr_path);
+       // uint nn =0;
+       // for (uint i = 1; i < path_r.d0; i++) {
+       //   qr_path = P.query(path_r[i], robot);
+       //   rrt_path->add(path_r[i], nn, qr_path);
+       //   nn +=1;
+       // }
+       // rrtPathTrees[robot] = rrt_path;
       }
       // std::cout << "isFinished status: " << isFinished[robot] << endl;
     }  
@@ -630,6 +634,9 @@ bool MR_RRT_PathFinder::growTreeToTree(MR_RRT_SingleTree& rrt_A, MR_RRT_SingleTr
       //P.C.view(true, STRING("Checking full path at step: " << i));
       if (!qr_full->isFeasible) {
         fullPathFeasible = false;
+        for (const auto& [robot, path_r] : rrtPaths) {
+          isFinished[robot] = false;
+        }
         break;
       }
     }
