@@ -35,10 +35,14 @@ void init_PathAlgos(pybind11::module& m) {
             pybind11::arg("earlyExit")=false,
             pybind11::arg("penalty")=500.0,
             pybind11::arg("verbose")=0)
-    .def("solve", &rai::MCR_PathFinder::solve, "Solve the MCR problem", 
-          pybind11::arg("maxIters")=2000, 
-          pybind11::arg("stepSize")=0.5, 
-          pybind11::arg("connRadius")=1.5)
+        .def("solve", [](rai::MCR_PathFinder& self, int maxIters, double stepSize, double connRadius) -> pybind11::object {
+                    rai::MCRResult res = self.solve(maxIters, stepSize, connRadius);
+                    if(!res.success) return pybind11::none();
+                    return pybind11::cast(res.removedConstraints);
+                }, "Solve the MCR problem",
+                    pybind11::arg("maxIters")=2000,
+                    pybind11::arg("stepSize")=0.5,
+                    pybind11::arg("connRadius")=1.5)
     ;
     // 3. New D_PathFinder Class Binding    
   pybind11::class_<rai::D_PathFinder, std::shared_ptr<rai::D_PathFinder>>(m, "D_PathFinder", "todo doc")

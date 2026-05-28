@@ -62,10 +62,10 @@ struct MCR_PathFinder {
   // Helpers
   void checkCollisions(const arr& q, bool& isHard, uintA& softHits);
   double getEdgeData(const arr& from, const arr& to, uintA& constraints, double stepSize=0.1);
-  bool hasPathToGoal();
+  bool hasPathToGoal(bool requireNoObstacles=false);
 
   // Core Methods
-  StringA solve(int maxIters=2000, double stepSize=0.5, double connRadius=1.5);
+  MCRResult solve(int maxIters=2000, double stepSize=0.5, double connRadius=1.5);
   MCRResult runAStar();
 };
 

@@ -442,8 +442,8 @@ shared_ptr<QueryResult> ConfigurationProblem::query(const arr& x, const std::map
 
   arr lastValue;
   for(auto& [key, value] : frame) {
-    //cout << key << ", " << value[depth] << " depth: " << depth <<  endl;
-    if (depth < value.N) {
+    //cout << key << ", " << "N" <<value.N << " d0: " << value.d0 << " d1: " << value.d1 << " depth: " << depth <<  endl;
+    if (depth < value.d0) {
       arr pos = {value[depth](0), value[depth](1), 0.2};
       pos(2) = 0.2;
       C.frames.elem(key)->setPosition(pos);

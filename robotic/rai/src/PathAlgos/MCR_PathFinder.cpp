@@ -39,6 +39,7 @@ void MCR_PathFinder::checkCollisions(const arr& q, bool& isHard, uintA& softHits
     isHard = false;
     softHits.clear();
     C.setJointState(q);
+    
    
     C.stepFcl();
     // Compute collisions
@@ -48,14 +49,15 @@ void MCR_PathFinder::checkCollisions(const arr& q, bool& isHard, uintA& softHits
         double dist = p.d;
         uint obsId = (p.a->ID == targetID) ? p.b->ID : p.a->ID;
         bool isSoft = softObsIndices.contains(obsId);
-        if(isSoft)softHits.setAppend(obsId);
+        if(isSoft){softHits.setAppend(obsId); }
         else {
           isHard = true;
+          
           return;
         }
       }
     }
-
+    // C.view(true, "MCR collision check at q: ");
 }
 
 // ============================================================================== //
@@ -94,7 +96,7 @@ double MCR_PathFinder::getEdgeData(const arr& from, const arr& to, uintA& constr
 
 // ============================================================================== //
 
-StringA MCR_PathFinder::solve(int maxIters, double stepSize, double connRadius){
+MCRResult MCR_PathFinder::solve(int maxIters, double stepSize, double connRadius){
     if (!persist) {
         // Clean up previous run
         for(auto* n : nodes) delete n;
@@ -159,10 +161,10 @@ StringA MCR_PathFinder::solve(int maxIters, double stepSize, double connRadius){
                     
                     // Early exit check: if goal is now connected to start
                     if(earlyExit && (n == goalNode || newNode == goalNode) && !goalConnected){
-                        // TODO: Add better early exit
-                        if(hasPathToGoal()){
-                            goalConnected = true; // this should be true to trigger the break
-                            if(verbose > 0) std::cout << "MCR: Early exit - goal connected at iteration " << k << std::endl;
+                        // Leave early if there is a path to the goal that has no soft obstacles
+                        if(hasPathToGoal(true)){
+                            goalConnected = true;
+                            if(verbose > 0) std::cout << "MCR: Early exit - obstacle-free path to goal at iteration " << k << std::endl;
                             break;
                         }
                     }
@@ -178,17 +180,17 @@ StringA MCR_PathFinder::solve(int maxIters, double stepSize, double connRadius){
 
     if(!res.success){
         if(verbose) std::cout << "MCR Failed to find a path." << std::endl;
-        return {};
+        return res;
     }
     
     if(verbose) std::cout << "MCR Found path. Blocking objects: " << res.removedConstraints << std::endl;
     
-    return res.removedConstraints;
+    return res;
 }
 
 // ============================================================================== //
 
-bool MCR_PathFinder::hasPathToGoal(){
+bool MCR_PathFinder::hasPathToGoal(bool requireNoObstacles){
     // Simple BFS to check connectivity
     std::set<MCR_Node*> visited;
     std::queue<MCR_Node*> q;
@@ -203,6 +205,8 @@ bool MCR_PathFinder::hasPathToGoal(){
         if(curr == goalNode) return true;
         
         for(const auto& edge : curr->neighbors){
+            // If requiring no obstacles, only traverse edges without constraints
+            if(requireNoObstacles && edge.constraints.N > 0) continue;
             if(!visited.count(edge.target)){
                 visited.insert(edge.target);
                 q.push(edge.target);
